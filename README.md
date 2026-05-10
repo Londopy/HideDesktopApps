@@ -27,7 +27,7 @@ A lightweight Windows system-tray app that hides and shows desktop icons — per
 
 ### Quick install (recommended)
 
-Double-click `install_and_run.bat` — a colour menu will appear:
+Double-click `install_and_run.bat` — a menu will appear:
 
 ```
 1  FULL INSTALL  ← does everything: installs packages, adds to startup, launches app
@@ -58,11 +58,11 @@ The app writes its startup entry automatically on first launch.
 | Action | Effect |
 |---|---|
 | `Ctrl+Alt+H` | Toggle desktop icons |
-| Double-click wallpaper / desktop | Toggle desktop icons |
 | Double-click tray icon | Toggle desktop icons |
 | Right-click tray → **Toggle Desktop Icons** | Toggle desktop icons |
 | Right-click tray → **Toggle All Windows** | Hide / restore all open app windows |
 | Right-click tray → **Settings…** | Change the hotkey (app restarts automatically) |
+| Right-click tray → **Restart** | Restarts the program|
 | Right-click tray → **Exit** | Restore everything and quit |
 
 ---
@@ -91,15 +91,6 @@ key = h
 
 ---
 
-## Notes on Wallpaper Engine
-
-The wallpaper double-click works by listening for two left-clicks within Windows' system double-click interval on a window that is a descendant of `Progman` or `WorkerW` — the same root windows that Wallpaper Engine uses for its render surface. No special Wallpaper Engine configuration is needed.
-
-### Safety design
-
-The mouse listener uses a `WH_MOUSE_LL` low-level hook. The callback does **only** pure arithmetic and a single non-blocking queue post before returning — no Win32 window calls happen inside it. A separate worker thread handles everything else. This means the hook will never delay or freeze mouse input regardless of system load.
-
----
 
 ## Startup management
 
