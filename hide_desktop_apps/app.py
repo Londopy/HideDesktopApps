@@ -48,6 +48,7 @@ Dependencies
 """
 from __future__ import annotations
 
+import atexit
 import configparser
 import ctypes
 import ctypes.wintypes
@@ -375,12 +376,17 @@ def _apply_defaults(cfg: configparser.ConfigParser) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Restart
+# Restore all  —  single source of truth for "put everything back"
 # ---------------------------------------------------------------------------
 
-def _request_restart(_icon_arg=None, _item=None) -> None:
-    """Restore everything, then stop the icon. __main__ loop re-calls main()."""
-    global _restart_requested
+def _restore_all() -> None:
+    """Unhide the taskbar, all windows, and desktop icons.
+
+    Called on clean exit, on restart, and registered with ``atexit`` so that
+    a crash or unhandled exception doesn't strand invisible windows.
+    Note: atexit handlers do NOT fire if the process is hard-killed (e.g.
+    Task Manager → End Process).  Use the tray Exit item for a clean shutdown.
+    """
     with _lock:
         if _taskbar_hidden:
             _show_taskbar()
@@ -388,6 +394,20 @@ def _request_restart(_icon_arg=None, _item=None) -> None:
             _show_all_windows()
         if _icons_hidden:
             _show_desktop_icons()
+
+
+# Register once at import time — fires on normal exit and unhandled exceptions.
+atexit.register(_restore_all)
+
+
+# ---------------------------------------------------------------------------
+# Restart
+# ---------------------------------------------------------------------------
+
+def _request_restart(_icon_arg=None, _item=None) -> None:
+    """Restore everything, then stop the icon. __main__ loop re-calls main()."""
+    global _restart_requested
+    _restore_all()
     _restart_requested = True
     if _icon is not None:
         _icon.stop()
@@ -821,13 +841,7 @@ def _check_startup() -> bool:
 # ---------------------------------------------------------------------------
 
 def _exit(icon: pystray.Icon, _item) -> None:
-    with _lock:
-        if _taskbar_hidden:
-            _show_taskbar()
-        if _windows_hidden:
-            _show_all_windows()
-        if _icons_hidden:
-            _show_desktop_icons()
+    _restore_all()
     icon.stop()
 
 

@@ -316,11 +316,12 @@ def _draw_icon(icons_hidden: bool, windows_hidden: bool,
             d.line([(8, 8), (56, 56)], fill="#e74c3c", width=5)
             d.line([(56, 8), (8, 56)], fill="#e74c3c", width=5)
 
-    # Small orange dot in the bottom-right corner when taskbar is hidden
+    # Orange dot in the bottom-right corner when taskbar is hidden
+    # r=14 so it scales to ~3-4px at 16px tray size — visible but not overwhelming
     if taskbar_hidden:
-        r = 10
-        d.ellipse((size - r*2 - 2, size - r*2 - 2, size - 2, size - 2),
-                  fill="#f39c12", outline="white", width=2)
+        r = 14
+        d.ellipse((size - r*2 - 1, size - r*2 - 1, size - 1, size - 1),
+                  fill="#e67e22", outline="white", width=2)
 
     return img
 

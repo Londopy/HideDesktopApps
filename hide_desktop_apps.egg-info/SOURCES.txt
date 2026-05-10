@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+hide_desktop_apps/__init__.py
+hide_desktop_apps/__main__.py
+hide_desktop_apps/app.py
+hide_desktop_apps.egg-info/PKG-INFO
+hide_desktop_apps.egg-info/SOURCES.txt
+hide_desktop_apps.egg-info/dependency_links.txt
+hide_desktop_apps.egg-info/entry_points.txt
+hide_desktop_apps.egg-info/requires.txt
+hide_desktop_apps.egg-info/top_level.txt

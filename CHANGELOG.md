@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [pat
 
 ---
 
+## [0.3.0] — 2026-05-09
+
+### Added
+- **`atexit` cleanup handler** — all hidden state (taskbar, windows, desktop icons) is now automatically restored if the app exits via an unhandled exception or `Ctrl+C`. Hard-kills (Task Manager → End Process) are still unrecoverable; documented in README.
+- **Caveats & Known Issues section** in README — covers ghost-window risk and antivirus false positives when packaging with PyInstaller.
+- **Who is this for? section** in README — use cases for streamers, kiosk setups, focus tools, and desktop customisation.
+- **`_restore_all()` helper** — single function that handles all three restore operations; `_exit()` and `_request_restart()` now delegate to it instead of duplicating the logic.
+
+---
+
 ## [0.2.0] — 2026-05-09
 
 ### Added
