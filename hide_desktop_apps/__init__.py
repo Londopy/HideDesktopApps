@@ -25,5 +25,5 @@ Only ``main()`` is part of the public API.  Everything else is internal.
 
 from hide_desktop_apps.app import main  # noqa: F401
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = ["main"]

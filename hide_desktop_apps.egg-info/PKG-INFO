@@ -52,6 +52,16 @@ Config and the tray icon are stored in `%APPDATA%\HideDesktopApps\` and created 
 
 ---
 
+## Who is this for?
+
+- **Streamers & Presenters** — automatically hide sensitive apps (email, Slack, Discord) when you start a screen-share or go live, then restore them when you're done.
+- **Wallpaper Engine / desktop art fans** — reveal your animated wallpaper on demand with a single hotkey, without closing anything.
+- **Kiosk & display terminals** — cleanly tuck away standard OS chrome for a dedicated display without terminating background processes.
+- **Focus / productivity tools** — build Python scripts that hide distracting apps during a focus block and restore them automatically when the block ends.
+- **Desktop customisation ("riced" setups)** — programmatically control the taskbar and desktop icons to match your current layout or theme.
+
+---
+
 ## Features
 - **Three configurable hotkeys** — `Ctrl+Alt+H` toggles icons, `Ctrl+Alt+T` toggles the taskbar, `Ctrl+Alt+W` toggles all windows
 - **Taskbar toggle** — hide/show the taskbar from the tray or via hotkey (supports multi-monitor)
@@ -187,6 +197,20 @@ Press `Ctrl+Alt+W` again to restore them, or right-click the tray icon → **Tog
 
 ### App isn't appearing in the tray
 Run option **8 — Debug mode** in `install_and_run.bat`. This runs the app in a visible console window so any errors are shown instead of swallowed silently.
+
+---
+
+## Caveats & known issues
+
+### Ghost windows after a crash
+If the app is killed unexpectedly (unhandled exception, `Ctrl+C`, etc.), it registers an `atexit` handler that restores all hidden state before the process exits. However, `atexit` **does not fire** if the process is hard-killed — for example via Task Manager → End Process, or a system power loss. In that case, hidden windows remain invisible until you restore them manually (see Recovery tips above) or reboot.
+
+For a clean shutdown always use **Right-click tray → Exit**, which explicitly restores everything before quitting.
+
+### Antivirus false positives
+This app uses Windows APIs (`RegisterHotKey`, `EnumWindows`, `ShowWindow`) that overlap with the behaviour of certain malware. Running it as a Python script is generally fine, but if you package it into a standalone `.exe` with PyInstaller, Windows Defender or other AV tools may flag it as suspicious.
+
+**This is a false positive.** The source code is fully open and auditable in this repo. If your AV flags it, you can submit a false-positive report to your vendor or add a folder exclusion. Signing the executable with a code-signing certificate also eliminates most AV warnings, but is out of scope for a personal tool.
 
 ---
 
