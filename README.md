@@ -192,5 +192,5 @@ HideDesktopApps/
 ```
 
 ---
-![Tray icon states](https://imgur.com/a/zTVdGVD)
-![Tray icon states](https://imgur.com/WwG6L7l)
+![Project Screenshot](https://imgur.com/a/zTVdGVD)
+![Project Screenshot](https://imgur.com/WwG6L7l)
