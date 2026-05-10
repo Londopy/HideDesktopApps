@@ -7,7 +7,6 @@ A lightweight Windows system-tray app that hides and shows desktop icons — per
 ## Features
 
 - **Global hotkey** `Ctrl+Alt+H` (configurable) — toggle desktop icons from anywhere
-- **Wallpaper double-click** — double-click on your desktop/wallpaper to toggle icons (works with Wallpaper Engine)
 - **Tray double-click** — double-click the tray icon for the same action
 - **Tray right-click menu** — toggle icons, toggle all open windows, change settings, or exit
 - **Auto-start** — places a launcher in your Windows Startup folder on first run, appears as **HideDesktopApps** in Task Manager → Startup tab
