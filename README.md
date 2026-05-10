@@ -192,5 +192,7 @@ HideDesktopApps/
 ```
 
 ---
-![Project Screenshot](https://imgur.com/a/zTVdGVD)
-![Project Screenshot](https://imgur.com/WwG6L7l)
+![Project Screenshot](https://i.imgur.com/RIb9uCv.jpeg)
+<img src="https://i.imgur.com/WwG6L7l.png" width="334"/>
+<img src="https://i.imgur.com/Tt8Xnen.png" width="334"/>
+<img src="https://i.imgur.com/53bkcmv.png" width="334"/>
