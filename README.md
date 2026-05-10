@@ -21,7 +21,7 @@ Config and the tray icon are stored in `%APPDATA%\HideDesktopApps\` and created 
 ## Features
 - **Three configurable hotkeys** — `Ctrl+Alt+H` toggles icons, `Ctrl+Alt+T` toggles the taskbar, `Ctrl+Alt+W` toggles all windows
 - **Taskbar toggle** — hide/show the taskbar from the tray or via hotkey (supports multi-monitor)
-- **Tray double-click** — double-click the tray icon to toggle icons
+- **Tray left-click** — left-click the tray icon to toggle icons
 - **Tray right-click menu** — toggle icons, taskbar, or all windows; open settings; restart; exit
 - **Auto-start** — places a launcher in your Windows Startup folder, appears as **HideDesktopApps** in Task Manager → Startup tab
 - **Settings window** — change all three hotkeys, startup delay, run-at-startup toggle, and default state — all without editing files
@@ -74,7 +74,7 @@ The app writes its startup entry automatically on first launch.
 | `Ctrl+Alt+H` | Toggle desktop icons |
 | `Ctrl+Alt+T` | Toggle taskbar |
 | `Ctrl+Alt+W` | Toggle all open windows |
-| Double-click tray icon | Toggle desktop icons |
+| Left-click tray icon | Toggle desktop icons |
 | Right-click tray → **Toggle Desktop Icons** | Toggle desktop icons |
 | Right-click tray → **Toggle Taskbar** | Hide / restore the taskbar |
 | Right-click tray → **Toggle All Windows** | Hide / restore all open app windows |
