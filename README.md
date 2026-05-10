@@ -48,13 +48,7 @@ Config and the tray icon are stored in `%APPDATA%\HideDesktopApps\` and created 
 
 ## Installation
 
-### Via pip (recommended)
-```bash
-pip install hide-desktop-apps
-hide-desktop-apps
-```
-
-### From source (clone this repo)
+### From source (recommended)(clone this repo)
 Double-click `install_and_run.bat` — a menu will appear:
 ```
 1  FULL INSTALL  ← does everything: installs packages, adds to startup, launches app
@@ -68,6 +62,12 @@ Double-click `install_and_run.bat` — a menu will appear:
 0  Exit
 ```
 Choose **1** for a first-time install.
+
+### Via pip 
+```bash
+pip install hide-desktop-apps
+hide-desktop-apps
+```
 
 ### Manual install
 ```bash
