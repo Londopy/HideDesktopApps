@@ -190,3 +190,7 @@ HideDesktopApps/
 ├── CHANGELOG.md         — version history
 └── README.md            — this file
 ```
+
+---
+![Tray icon states](https://imgur.com/a/zTVdGVD)
+![Tray icon states](https://imgur.com/WwG6L7l)
