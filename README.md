@@ -1,6 +1,21 @@
 # HideDesktopApps
 A lightweight Windows system-tray app that hides and shows desktop icons, the taskbar, and all windows — perfect for revealing your Wallpaper Engine wallpaper on demand.
 
+[![PyPI](https://img.shields.io/pypi/v/hide-desktop-apps)](https://pypi.org/project/hide-desktop-apps/)
+[![Python](https://img.shields.io/pypi/pyversions/hide-desktop-apps)](https://pypi.org/project/hide-desktop-apps/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Londopy/HideDesktopApps/blob/main/LICENSE)
+
+---
+
+## Install from PyPI
+
+```bash
+pip install hide-desktop-apps
+hide-desktop-apps
+```
+
+Config and the tray icon are stored in `%APPDATA%\HideDesktopApps\` and created automatically on first run.
+
 ---
 
 ## Features
@@ -23,7 +38,13 @@ A lightweight Windows system-tray app that hides and shows desktop icons, the ta
 
 ## Installation
 
-### Quick install (recommended)
+### Via pip (recommended)
+```bash
+pip install hide-desktop-apps
+hide-desktop-apps
+```
+
+### From source (clone this repo)
 Double-click `install_and_run.bat` — a menu will appear:
 ```
 1  FULL INSTALL  ← does everything: installs packages, adds to startup, launches app
