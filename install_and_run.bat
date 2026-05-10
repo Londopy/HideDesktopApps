@@ -14,8 +14,8 @@ echo       HideDesktopApps  ^|  Setup and Manager
 echo  ====================================================
 color 07
 echo.
-echo   Hotkey   : Ctrl+Alt+H  (change via tray right-click Settings)
-echo   Trigger  : hotkey, tray double-click, wallpaper double-click
+echo   Hotkeys  : Ctrl+Alt+H = toggle icons   Ctrl+Alt+W = toggle windows
+echo   Trigger  : hotkey or tray double-click  (change via right-click Settings)
 echo.
 echo  ----------------------------------------------------
 echo.
@@ -28,12 +28,13 @@ echo   4  Add to Windows startup
 echo   5  Remove from Windows startup
 echo   6  Check startup status
 echo   7  Open this folder in Explorer
+echo   8  Run in debug mode  (shows errors in console)
 echo   0  Exit
 echo.
 echo  ----------------------------------------------------
 echo.
 
-choice /c 12345670 /n /m "  Choose [0-7]: "
+choice /c 123456780 /n /m "  Choose [0-8]: "
 set CHOICE=%errorlevel%
 
 if %CHOICE%==1 goto FULL_INSTALL
@@ -43,7 +44,8 @@ if %CHOICE%==4 goto ADD_STARTUP
 if %CHOICE%==5 goto REMOVE_STARTUP
 if %CHOICE%==6 goto CHECK_STARTUP
 if %CHOICE%==7 goto OPEN_FOLDER
-if %CHOICE%==8 goto EXIT_MENU
+if %CHOICE%==8 goto DEBUG_RUN
+if %CHOICE%==9 goto EXIT_MENU
 
 goto MENU
 
@@ -108,7 +110,9 @@ echo   - Look for the coloured squares icon in your system tray
 echo     (bottom-right corner, near the clock).
 echo   - If you don't see it, click the  ^  arrow to expand the tray.
 echo   - Right-click the icon for the full menu.
-echo   - Double-click the icon or press Ctrl+Alt+H to toggle icons.
+echo   - Ctrl+Alt+H toggles desktop icons.
+echo   - Ctrl+Alt+W toggles all open windows.
+echo   - Hotkeys can be changed via right-click Settings.
 echo.
 color 0B
 echo  ====================================================
@@ -243,6 +247,27 @@ goto MENU
 :: ============================================================
 :OPEN_FOLDER
 explorer "%~dp0"
+goto MENU
+
+
+:: ============================================================
+:DEBUG_RUN
+cls
+color 0B
+echo.
+echo  ---- Debug run (errors visible) --------------------
+echo.
+color 07
+echo  Running with python.exe so errors appear in this window.
+echo  Press Ctrl+C to stop the app.
+echo.
+python "%~dp0hide_desktop.py"
+echo.
+color 0C
+echo  App exited (see any errors above).
+color 07
+echo.
+pause
 goto MENU
 
 
