@@ -53,8 +53,13 @@ Config and the tray icon are stored in `%APPDATA%\HideDesktopApps\` and created 
 
 ## Installation
 
-### From source (recommended)(clone this repo)
-Double-click `install_and_run.bat` — a menu will appear:
+### Standalone EXE — no Python required (easiest)
+Download the latest `HideDesktopApps-vX.X.X-windows.zip` from the [Releases page](https://github.com/Londopy/HideDesktopApps/releases/latest), extract it anywhere, and double-click `HideDesktopApps.exe`. The tray icon appears immediately — no install needed.
+
+> **Note:** Windows Defender or other AV tools may flag the EXE as suspicious because it uses system APIs (`RegisterHotKey`, `ShowWindow`) that overlap with certain malware behaviour. This is a false positive — the source is fully open and auditable here. You can add a folder exclusion or run from source instead.
+
+### From source (Python required)
+Clone or download this repo, then double-click `install_and_run.bat`:
 ```
 1  FULL INSTALL  ← does everything: installs packages, adds to startup, launches app
 2  Install / update Python packages only
@@ -68,7 +73,7 @@ Double-click `install_and_run.bat` — a menu will appear:
 ```
 Choose **1** for a first-time install.
 
-### Via pip 
+### Via pip
 ```bash
 pip install hide-desktop-apps
 hide-desktop-apps
