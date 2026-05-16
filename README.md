@@ -4,6 +4,11 @@ A lightweight Windows system-tray app that hides and shows desktop icons, the ta
 [![PyPI](https://img.shields.io/pypi/v/hide-desktop-apps)](https://pypi.org/project/hide-desktop-apps/0.4.0)
 [![Python](https://img.shields.io/pypi/pyversions/hide-desktop-apps)](https://pypi.org/project/hide-desktop-apps/0.4.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Londopy/HideDesktopApps/blob/main/LICENSE)
+![Relese](https://img.shields.io/github/v/release/Londopy/capture-bypass) 
+![Size](https://img.shields.io/github/languages/code-size/Londopy/capture-bypass) 
+![Files](https://img.shields.io/github/directory-file-count/Londopy/capture-bypass) 
+![Issues](https://img.shields.io/github/issues/Londopy/capture-bypass) 
+
 
 ---
 
