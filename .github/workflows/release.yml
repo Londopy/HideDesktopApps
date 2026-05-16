@@ -1,0 +1,88 @@
+name: Build & Release
+
+# Triggers when you push a version tag, e.g. git tag v0.2.0 && git push --tags
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # needed to create the GitHub Release and upload assets
+
+jobs:
+  build:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Python ──────────────────────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ── 3. Install dependencies + PyInstaller ──────────────────────────────
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      # ── 4. Build the EXE ───────────────────────────────────────────────────
+      #   --onefile      → single .exe, no folder of DLLs
+      #   --noconsole    → no black cmd window pops up (same as pythonw)
+      #   --icon         → embed the app icon
+      #   --name         → output file name
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller `
+            --onefile `
+            --noconsole `
+            --icon=hide_desktop.ico `
+            --name=HideDesktopApps `
+            hide_desktop.py
+
+      # ── 5. Package into a ZIP ─────────────────────────────────────────────
+      #   Includes the EXE, the batch launcher, and a minimal README so users
+      #   know what they've downloaded.
+      - name: Create release ZIP
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zip = "HideDesktopApps-$tag-windows.zip"
+          Compress-Archive -Path `
+            dist\HideDesktopApps.exe, `
+            install_and_run.bat, `
+            README.md, `
+            CHANGELOG.md `
+            -DestinationPath $zip
+          echo "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+
+      # ── 6. Create GitHub Release and upload assets ────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "HideDesktopApps ${{ github.ref_name }}"
+          body: |
+            ## Install
+
+            **Option A — Standalone EXE (no Python needed)**
+            1. Download `HideDesktopApps-${{ github.ref_name }}-windows.zip`
+            2. Extract anywhere
+            3. Double-click `HideDesktopApps.exe` — the tray icon appears immediately
+
+            **Option B — Run from source (Python required)**
+            1. Download the source zip from *Assets → Source code*
+            2. Run `install_and_run.bat` → choose **1 Full Install**
+
+            ---
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for what's new.
+          files: |
+            ${{ env.ZIP_NAME }}
+            dist/HideDesktopApps.exe
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
