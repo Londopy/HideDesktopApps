@@ -4,7 +4,6 @@ __pycache__/
 *.pyo
 
 # Generated files
-hide_desktop.ico
 HideDesktopApps.vbs
 
 # OS / editor noise
