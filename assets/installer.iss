@@ -118,4 +118,5 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
-    TerminateA
+    TerminateApp();
+end;
