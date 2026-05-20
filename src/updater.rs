@@ -13,7 +13,7 @@ fn arch_suffix() -> &'static str {
     {
         "x64"
     }
-    #[cfg(target_arch = "i686")]
+    #[cfg(target_arch = "x86")]
     {
         "x86"
     }
@@ -21,7 +21,7 @@ fn arch_suffix() -> &'static str {
     {
         "arm64"
     }
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "i686", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
     {
         "x64"
     }

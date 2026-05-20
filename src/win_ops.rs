@@ -124,7 +124,7 @@ unsafe extern "system" fn enum_windows_cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
     // Only include top-level windows (no owner)
     let owner = GetWindow(hwnd, GW_OWNER);
     if let Ok(owner_hwnd) = owner {
-        if owner_hwnd.0 != 0 {
+        if !owner_hwnd.0.is_null() {
             return TRUE;
         }
     }
@@ -133,7 +133,7 @@ unsafe extern "system" fn enum_windows_cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
     let mut placement = WINDOWPLACEMENT::default();
     placement.length = std::mem::size_of::<WINDOWPLACEMENT>() as u32;
     let _ = GetWindowPlacement(hwnd, &mut placement);
-    let show_cmd = placement.showCmd.0 as u32;
+    let show_cmd = placement.showCmd;
 
     data.hwnds.push((hwnd, show_cmd));
     TRUE

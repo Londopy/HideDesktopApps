@@ -8,7 +8,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 /// Get the main taskbar HWND.
 fn get_taskbar() -> HWND {
     // SAFETY: FFI call to find the Shell_TrayWnd (the main taskbar)
-    unsafe { FindWindowW(w!("Shell_TrayWnd"), windows::core::PCWSTR::null()) }
+    unsafe {
+        FindWindowW(w!("Shell_TrayWnd"), windows::core::PCWSTR::null())
+            .unwrap_or(HWND(std::ptr::null_mut()))
+    }
 }
 
 /// Get the secondary taskbar HWNDs (for multi-monitor setups).
@@ -46,7 +49,7 @@ fn get_secondary_taskbars() -> Vec<HWND> {
 /// Returns true if the taskbar is currently visible.
 pub fn is_taskbar_visible() -> bool {
     let hwnd = get_taskbar();
-    if hwnd.0 == 0 {
+    if hwnd.0.is_null() {
         return true;
     }
     // SAFETY: FFI call to check window visibility
@@ -56,7 +59,7 @@ pub fn is_taskbar_visible() -> bool {
 /// Hide the taskbar (main + all secondary monitors).
 pub fn hide_taskbar() -> Result<()> {
     let primary = get_taskbar();
-    anyhow::ensure!(primary.0 != 0, "Could not find taskbar window");
+    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window");
 
     // SAFETY: FFI ShowWindow calls are safe when the HWND is valid
     unsafe {
@@ -71,7 +74,7 @@ pub fn hide_taskbar() -> Result<()> {
 /// Show the taskbar (main + all secondary monitors).
 pub fn show_taskbar() -> Result<()> {
     let primary = get_taskbar();
-    anyhow::ensure!(primary.0 != 0, "Could not find taskbar window");
+    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window");
 
     // SAFETY: FFI ShowWindow calls are safe when the HWND is valid
     unsafe {
