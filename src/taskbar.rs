@@ -47,6 +47,7 @@ fn get_secondary_taskbars() -> Vec<HWND> {
 }
 
 /// Returns true if the taskbar is currently visible.
+#[allow(dead_code)]
 pub fn is_taskbar_visible() -> bool {
     let hwnd = get_taskbar();
     if hwnd.0.is_null() {
@@ -63,9 +64,9 @@ pub fn hide_taskbar() -> Result<()> {
 
     // SAFETY: FFI ShowWindow calls are safe when the HWND is valid
     unsafe {
-        ShowWindow(primary, SW_HIDE);
+        let _ = ShowWindow(primary, SW_HIDE);
         for secondary in get_secondary_taskbars() {
-            ShowWindow(secondary, SW_HIDE);
+            let _ = ShowWindow(secondary, SW_HIDE);
         }
     }
     Ok(())
@@ -78,15 +79,16 @@ pub fn show_taskbar() -> Result<()> {
 
     // SAFETY: FFI ShowWindow calls are safe when the HWND is valid
     unsafe {
-        ShowWindow(primary, SW_SHOW);
+        let _ = ShowWindow(primary, SW_SHOW);
         for secondary in get_secondary_taskbars() {
-            ShowWindow(secondary, SW_SHOW);
+            let _ = ShowWindow(secondary, SW_SHOW);
         }
     }
     Ok(())
 }
 
 /// Toggle taskbar visibility.
+#[allow(dead_code)]
 pub fn toggle_taskbar() -> Result<bool> {
     if is_taskbar_visible() {
         hide_taskbar()?;

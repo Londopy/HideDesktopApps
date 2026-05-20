@@ -30,7 +30,6 @@ fn arch_suffix() -> &'static str {
 #[derive(Debug, serde::Deserialize)]
 struct GithubRelease {
     tag_name: String,
-    prerelease: bool,
     assets: Vec<GithubAsset>,
 }
 
@@ -135,7 +134,6 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
             .text()
             .context("Reading sha256 text")?;
         let expected_hex = expected_hex
-            .trim()
             .split_whitespace()
             .next()
             .unwrap_or("")

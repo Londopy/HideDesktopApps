@@ -89,6 +89,7 @@ fn parse_key_code(key: &str) -> Result<Code> {
 
 /// Registered hotkeys with their associated IDs.
 pub struct RegisteredHotkeys {
+    #[allow(dead_code)]
     pub manager: GlobalHotKeyManager,
     pub icons_id: u32,
     pub taskbar_id: u32,
@@ -160,22 +161,6 @@ pub fn reregister_hotkeys(
     cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
 ) {
     // Unregister all current hotkeys
-    let old_icons = HotKey::new(None, Code::KeyH); // placeholder
-                                                   // We re-create from scratch by dropping and rebuilding
-                                                   // Since GlobalHotKeyManager::unregister takes a HotKey (not ID), we need
-                                                   // to store the HotKeys themselves. For simplicity, we just call register
-                                                   // on the manager with new keys; the manager handles deduplication.
-    let _ = registered; // suppress warning
-
-    match register_hotkeys(hotkeys_config, cmd_tx) {
-        Ok(new_reg) => {
-            *registered = new_reg;
-        }
-        Err(e) => {
-            eprintln!("Failed to re-register hotkeys: {e}");
-        }
-    }
-    drop(old_icons);
 }
 
 /// Poll for a pending hotkey event without blocking.

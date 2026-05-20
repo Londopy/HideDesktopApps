@@ -130,8 +130,10 @@ unsafe extern "system" fn enum_windows_cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
     }
 
     // Get the current show command so we can restore it correctly
-    let mut placement = WINDOWPLACEMENT::default();
-    placement.length = std::mem::size_of::<WINDOWPLACEMENT>() as u32;
+    let mut placement = WINDOWPLACEMENT {
+        length: std::mem::size_of::<WINDOWPLACEMENT>() as u32,
+        ..Default::default()
+    };
     let _ = GetWindowPlacement(hwnd, &mut placement);
     let show_cmd = placement.showCmd;
 
@@ -169,7 +171,9 @@ pub fn hide_windows(excluded_processes: &[String]) -> Result<Vec<HiddenWindow>> 
 
     for (hwnd, show_cmd) in windows {
         // SAFETY: hwnd is a valid window handle obtained from EnumWindows
-        unsafe { ShowWindow(hwnd, SW_HIDE) };
+        unsafe {
+            let _ = ShowWindow(hwnd, SW_HIDE);
+        };
         hidden.push(HiddenWindow {
             hwnd: hwnd.0 as isize,
             show_cmd,
@@ -193,7 +197,9 @@ pub fn restore_windows(hidden: &[HiddenWindow]) -> Result<()> {
             _ => SW_SHOWNORMAL,
         };
 
-        unsafe { ShowWindow(hwnd, cmd) };
+        unsafe {
+            let _ = ShowWindow(hwnd, cmd);
+        };
     }
     Ok(())
 }

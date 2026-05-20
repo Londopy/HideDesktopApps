@@ -28,7 +28,7 @@ pub struct StartupConfig {
     pub delay_s: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DefaultsConfig {
     pub profile: String,
 }
@@ -83,14 +83,6 @@ impl Default for StartupConfig {
         Self {
             enabled: true,
             delay_s: 30,
-        }
-    }
-}
-
-impl Default for DefaultsConfig {
-    fn default() -> Self {
-        Self {
-            profile: String::new(),
         }
     }
 }
