@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+
+PackageIdentifier: Londopy.HideDesktopApps
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: HideDesktopApps
+PublisherUrl: https://github.com/Londopy/HideDesktopApps
+PublisherSupportUrl: https://github.com/Londopy/HideDesktopApps/issues
+PackageName: HideDesktopApps
+PackageUrl: https://github.com/Londopy/HideDesktopApps
+License: MIT
+LicenseUrl: https://github.com/Londopy/HideDesktopApps/blob/main/LICENSE
+ShortDescription: System tray app to hide/show desktop icons, taskbar, and windows via hotkeys.
+Description: |-
+  HideDesktopApps is a lightweight Windows system tray utility that lets you
+  instantly hide and show desktop icons, the taskbar, and all open application
+  windows using configurable global hotkeys. Supports profiles, Discord Rich
+  Presence, Windows toast notifications, and automatic updates.
+Moniker: hidedesktopapps
+Tags:
+  - desktop
+  - tray
+  - hotkey
+  - productivity
+  - windows
+ReleaseNotesUrl: https://github.com/Londopy/HideDesktopApps/releases/tag/v1.0.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

@@ -1,0 +1,231 @@
+= HideDesktopApps
+:toc:
+:toc-placement: preamble
+:icons: font
+
+A lightweight Windows system-tray utility that hides and shows desktop icons,
+the taskbar, and open application windows — perfect for revealing a Wallpaper
+Engine wallpaper or cleaning up for a presentation on demand.
+
+image:https://img.shields.io/github/v/release/Londopy/HideDesktopApps[GitHub release,link=https://github.com/Londopy/HideDesktopApps/releases/latest]
+image:https://img.shields.io/badge/License-MIT-yellow.svg[License: MIT,link=https://github.com/Londopy/HideDesktopApps/blob/main/LICENSE]
+image:https://img.shields.io/badge/platform-Windows%2010%2B-blue[Platform]
+
+---
+
+== Install
+
+=== Installer (recommended)
+
+Download `HideDesktopApps-vX.X.X-x64-setup.exe` from the
+https://github.com/Londopy/HideDesktopApps/releases/latest[Releases page]
+and run it. The installer handles startup registration and notifications.
+
+=== Scoop
+
+[source,bash]
+----
+scoop bucket add HideDesktopApps https://github.com/Londopy/HideDesktopApps
+scoop install HideDesktopApps
+----
+
+=== WinGet
+
+[source,bash]
+----
+winget install Londopy.HideDesktopApps
+----
+
+=== Portable ZIP
+
+Download the ZIP for your architecture (x64 / x86 / ARM64), extract it
+anywhere, and run `HideDesktopApps.exe`. Config lives next to the exe when a
+file named `portable` is present in the same directory.
+
+---
+
+== Who is this for?
+
+* **Streamers & presenters** — hide sensitive apps before going live, restore
+  them after.
+* **Wallpaper Engine fans** — reveal your animated wallpaper with a single
+  hotkey without closing anything.
+* **Focus / productivity** — use profiles (Focus, Presentation, Clean Desktop)
+  to switch states instantly.
+* **Kiosk displays** — tuck away standard OS chrome for a dedicated display
+  without terminating background processes.
+* **Riced setups** — programmatically control the taskbar and icons to match
+  your current layout.
+
+---
+
+== Features
+
+* **Three global hotkeys** — Ctrl+Alt+H (icons), Ctrl+Alt+T (taskbar),
+  Ctrl+Alt+W (windows). All fully configurable.
+* **Profiles** — save and apply named combinations (e.g. "Focus", "Clean
+  Desktop") from the tray submenu or a dedicated hotkey.
+* **Dynamic tray icon** — colour changes reflect the current hide state at a
+  glance; an orange dot marks a hidden taskbar.
+* **Auto-start** — registers a Task Scheduler job with a configurable delay
+  (default 30 s) so the app starts with Windows without a UAC prompt.
+* **Windows toast notifications** — optional pop-ups for updates, hotkey
+  conflicts, and profile switches.
+* **Discord Rich Presence** — shows what you're hiding; clears automatically
+  when everything is visible.
+* **Auto-updater** — checks GitHub Releases on a configurable interval,
+  verifies SHA-256, and does an in-place binary replacement.
+* **Multi-monitor taskbar** — hides and restores the taskbar on all connected
+  monitors.
+* **Portable mode** — place a file named `portable` next to the exe to keep
+  config local.
+* **Config migration** — automatically imports a legacy `config.ini` from the
+  Python version on first run.
+* Single Rust binary, no runtime, ~1–2 MB.
+
+---
+
+== Controls
+
+[cols="1,2",options="header"]
+|===
+| Action | Effect
+
+| Ctrl+Alt+H
+| Toggle desktop icons
+
+| Ctrl+Alt+T
+| Toggle taskbar
+
+| Ctrl+Alt+W
+| Toggle all open windows
+
+| Left-click tray icon
+| Toggle desktop icons
+
+| Right-click → Profiles
+| Apply a saved profile
+
+| Right-click → Settings…
+| Open the settings window
+
+| Right-click → Check for Updates
+| Manually trigger an update check
+
+| Right-click → Restart
+| Restart the app
+
+| Right-click → Exit
+| Restore everything and quit
+|===
+
+---
+
+== Tray icon guide
+
+[cols="1,2",options="header"]
+|===
+| Icon | Meaning
+
+| Four coloured tiles
+| Everything visible
+
+| Four coloured tiles + orange dot
+| Taskbar hidden
+
+| Grey tiles + red X
+| Desktop icons hidden
+
+| Grey tiles + red X + orange dot
+| Icons and taskbar hidden
+|===
+
+---
+
+== Settings window
+
+Right-click the tray icon → *Settings…* to open a tabbed window:
+
+* **Hotkeys** — set modifier keys and letter for all three actions; conflicts
+  are detected live.
+* **Profiles** — create, edit, and delete named state snapshots; assign
+  individual hotkeys.
+* **Startup** — toggle auto-start and set the login delay (0–120 s).
+* **Notifications** — master toggle and per-event checkboxes (update, hotkey
+  fail, profile switch).
+* **Updater** — channel (stable/beta), check interval, manual check button.
+* **Discord** — enable/disable Rich Presence.
+* **About** — version, build target, links, "Copy debug info" button.
+
+---
+
+== Recovery
+
+=== Taskbar hidden and can't reach the tray
+
+Open *Run* (Win+R) and type:
+
+[source,powershell]
+----
+powershell -Command "Add-Type -N System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize"
+----
+
+Or just press Ctrl+Alt+T — the hotkey works even without the taskbar visible.
+
+=== All windows hidden
+
+Press Ctrl+Alt+W again, or right-click the tray icon → *Toggle App Windows*.
+
+=== App not in tray after a crash
+
+Hidden windows stay hidden until the app restores them. Restarting
+HideDesktopApps will restore them automatically because the app checks state
+on startup. If that doesn't work, reboot — Windows restores all window
+visibility on logon.
+
+---
+
+== Building from source
+
+[source,bash]
+----
+# x64
+cargo build --release --target x86_64-pc-windows-msvc
+
+# ARM64 (cross-compiles from x64)
+cargo build --release --target aarch64-pc-windows-msvc
+----
+
+Requires the `windows-latest` GitHub Actions runner or a Windows machine with
+Visual Studio Build Tools + the relevant MSVC target installed.
+
+---
+
+== File layout
+
+----
+HideDesktopApps/
+├── src/                    Rust source
+│   ├── main.rs
+│   ├── config.rs
+│   ├── ui/                 egui settings window
+│   └── ...
+├── assets/
+│   └── installer.iss       Inno Setup script
+├── scoop/
+│   └── HideDesktopApps.json  Scoop manifest
+├── winget/
+│   └── manifests/          WinGet manifest tree
+├── .github/workflows/      CI (ci.yml) + release (release.yml)
+├── Cargo.toml
+├── LICENSE
+├── LICENSE-COMMERCIAL
+└── README.adoc             this file
+----
+
+---
+
+== License
+
+MIT for personal and open-source use. See link:LICENSE-COMMERCIAL[] for
+commercial licensing.

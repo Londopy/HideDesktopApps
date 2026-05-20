@@ -1,0 +1,51 @@
+[package]
+name = "HideDesktopApps"
+version = "1.0.0"
+edition = "2021"
+description = "System tray app to hide/show desktop icons, taskbar, and windows via hotkeys"
+repository = "https://github.com/Londopy/HideDesktopApps"
+license = "MIT"
+
+[[bin]]
+name = "HideDesktopApps"
+path = "src/main.rs"
+
+[dependencies]
+tray-icon = "0.17"
+global-hotkey = "0.6"
+eframe = { version = "0.29", default-features = false, features = ["default_fonts", "wgpu"] }
+egui = "0.29"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+anyhow = "1"
+winreg = "0.52"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
+semver = { version = "1", features = ["serde"] }
+sha2 = "0.10"
+hex = "0.4"
+zip = "2"
+self_replace = "1"
+log = "0.4"
+env_logger = { version = "0.11", default-features = false }
+ctrlc = { version = "3", features = ["termination"] }
+tokio = { version = "1", default-features = false, features = ["rt"] }
+chrono = { version = "0.4", features = ["serde"] }
+serde_json = "1"
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+    "Win32_System_LibraryLoader",
+    "UI_Notifications",
+    "Data_Xml_Dom",
+    "Foundation",
+]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

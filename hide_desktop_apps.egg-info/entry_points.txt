@@ -1,2 +1,0 @@
-[console_scripts]
-hide-desktop-apps = hide_desktop_apps.__main__:main
