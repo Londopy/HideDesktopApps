@@ -1,10 +1,10 @@
+mod about_tab;
+mod discord_tab;
 mod hotkeys_tab;
+mod notifications_tab;
 mod profiles_tab;
 mod startup_tab;
-mod notifications_tab;
 mod updater_tab;
-mod discord_tab;
-mod about_tab;
 
 use crate::config::AppConfig;
 use crate::Cmd;
@@ -58,10 +58,7 @@ pub struct SettingsApp {
 }
 
 impl SettingsApp {
-    pub fn new(
-        config_shared: Arc<Mutex<AppConfig>>,
-        cmd_tx: std::sync::mpsc::Sender<Cmd>,
-    ) -> Self {
+    pub fn new(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mpsc::Sender<Cmd>) -> Self {
         let config = config_shared.lock().unwrap().clone();
         let startup_registered = crate::startup::is_registered();
         Self {
@@ -110,16 +107,14 @@ impl eframe::App for SettingsApp {
             });
             ui.separator();
 
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                match self.current_tab {
-                    Tab::Hotkeys => self.hotkeys_tab(ui),
-                    Tab::Profiles => self.profiles_tab(ui),
-                    Tab::Startup => self.startup_tab(ui),
-                    Tab::Notifications => self.notifications_tab(ui),
-                    Tab::Updater => self.updater_tab(ui),
-                    Tab::Discord => self.discord_tab(ui),
-                    Tab::About => self.about_tab(ui),
-                }
+            egui::ScrollArea::vertical().show(ui, |ui| match self.current_tab {
+                Tab::Hotkeys => self.hotkeys_tab(ui),
+                Tab::Profiles => self.profiles_tab(ui),
+                Tab::Startup => self.startup_tab(ui),
+                Tab::Notifications => self.notifications_tab(ui),
+                Tab::Updater => self.updater_tab(ui),
+                Tab::Discord => self.discord_tab(ui),
+                Tab::About => self.about_tab(ui),
             });
 
             ui.separator();
@@ -139,10 +134,7 @@ impl eframe::App for SettingsApp {
 }
 
 /// Open the Settings window in a new thread.
-pub fn open_settings(
-    config_shared: Arc<Mutex<AppConfig>>,
-    cmd_tx: std::sync::mpsc::Sender<Cmd>,
-) {
+pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mpsc::Sender<Cmd>) {
     std::thread::spawn(move || {
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -155,9 +147,7 @@ pub fn open_settings(
         let result = eframe::run_native(
             "HideDesktopApps Settings",
             native_options,
-            Box::new(move |_cc| {
-                Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))
-            }),
+            Box::new(move |_cc| Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))),
         );
 
         if let Err(e) = result {

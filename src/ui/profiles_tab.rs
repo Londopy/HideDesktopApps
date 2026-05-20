@@ -64,11 +64,7 @@ impl SettingsApp {
                 for name in &profile_names {
                     let is_none = name == "(none)";
                     let value = if is_none { "" } else { name.as_str() };
-                    ui.selectable_value(
-                        &mut self.config.defaults.profile,
-                        value.to_string(),
-                        name,
-                    );
+                    ui.selectable_value(&mut self.config.defaults.profile, value.to_string(), name);
                 }
             });
     }

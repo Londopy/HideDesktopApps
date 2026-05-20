@@ -161,10 +161,10 @@ pub fn reregister_hotkeys(
 ) {
     // Unregister all current hotkeys
     let old_icons = HotKey::new(None, Code::KeyH); // placeholder
-    // We re-create from scratch by dropping and rebuilding
-    // Since GlobalHotKeyManager::unregister takes a HotKey (not ID), we need
-    // to store the HotKeys themselves. For simplicity, we just call register
-    // on the manager with new keys; the manager handles deduplication.
+                                                   // We re-create from scratch by dropping and rebuilding
+                                                   // Since GlobalHotKeyManager::unregister takes a HotKey (not ID), we need
+                                                   // to store the HotKeys themselves. For simplicity, we just call register
+                                                   // on the manager with new keys; the manager handles deduplication.
     let _ = registered; // suppress warning
 
     match register_hotkeys(hotkeys_config, cmd_tx) {

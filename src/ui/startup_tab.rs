@@ -15,10 +15,7 @@ impl SettingsApp {
         ui.add_space(8.0);
         ui.horizontal(|ui| {
             ui.label("Startup delay:");
-            ui.add(
-                egui::Slider::new(&mut self.config.startup.delay_s, 0..=60)
-                    .suffix(" seconds"),
-            );
+            ui.add(egui::Slider::new(&mut self.config.startup.delay_s, 0..=60).suffix(" seconds"));
         });
 
         ui.add_space(8.0);

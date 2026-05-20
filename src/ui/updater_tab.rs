@@ -6,7 +6,10 @@ impl SettingsApp {
         ui.heading("Auto-Updater");
         ui.add_space(8.0);
 
-        ui.checkbox(&mut self.config.updater.enabled, "Enable automatic update checks");
+        ui.checkbox(
+            &mut self.config.updater.enabled,
+            "Enable automatic update checks",
+        );
 
         ui.add_space(8.0);
         ui.add_enabled_ui(self.config.updater.enabled, |ui| {
@@ -59,17 +62,15 @@ impl SettingsApp {
             if ui.button("Check Now").clicked() {
                 let channel = self.config.updater.channel.clone();
                 let tx = self.cmd_tx.clone();
-                std::thread::spawn(move || {
-                    match crate::updater::check_for_update(&channel) {
-                        Ok(Some(v)) => {
-                            let _ = tx.send(crate::Cmd::UpdateAvailable(v));
-                        }
-                        Ok(None) => {
-                            eprintln!("Up to date");
-                        }
-                        Err(e) => {
-                            eprintln!("Update check failed: {e}");
-                        }
+                std::thread::spawn(move || match crate::updater::check_for_update(&channel) {
+                    Ok(Some(v)) => {
+                        let _ = tx.send(crate::Cmd::UpdateAvailable(v));
+                    }
+                    Ok(None) => {
+                        eprintln!("Up to date");
+                    }
+                    Err(e) => {
+                        eprintln!("Update check failed: {e}");
                     }
                 });
                 self.update_status = Some("Checking…".to_string());

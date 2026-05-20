@@ -17,7 +17,13 @@ Register-ScheduledTask -TaskName 'HideDesktopApps' -Action $action -Trigger $tri
     );
 
     let output = std::process::Command::new("powershell")
-        .args(["-WindowStyle", "Hidden", "-NonInteractive", "-Command", &script])
+        .args([
+            "-WindowStyle",
+            "Hidden",
+            "-NonInteractive",
+            "-Command",
+            &script,
+        ])
         .output()?;
 
     if !output.status.success() {

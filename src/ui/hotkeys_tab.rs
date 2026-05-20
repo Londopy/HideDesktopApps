@@ -79,11 +79,19 @@ impl SettingsApp {
         ui.heading("Global Hotkeys");
         ui.add_space(8.0);
 
-        let new_icons = hotkey_editor(ui, "Toggle Desktop Icons", &self.config.hotkeys.icons.clone());
+        let new_icons = hotkey_editor(
+            ui,
+            "Toggle Desktop Icons",
+            &self.config.hotkeys.icons.clone(),
+        );
         ui.add_space(4.0);
         let new_taskbar = hotkey_editor(ui, "Toggle Taskbar", &self.config.hotkeys.taskbar.clone());
         ui.add_space(4.0);
-        let new_windows = hotkey_editor(ui, "Toggle App Windows", &self.config.hotkeys.windows.clone());
+        let new_windows = hotkey_editor(
+            ui,
+            "Toggle App Windows",
+            &self.config.hotkeys.windows.clone(),
+        );
 
         self.config.hotkeys.icons = new_icons;
         self.config.hotkeys.taskbar = new_taskbar;

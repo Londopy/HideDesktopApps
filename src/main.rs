@@ -78,8 +78,7 @@ fn run() -> Result<()> {
     }
 
     // Register hotkeys
-    let mut hotkey_reg =
-        hotkeys::register_hotkeys(&config.hotkeys, &cmd_tx)?;
+    let mut hotkey_reg = hotkeys::register_hotkeys(&config.hotkeys, &cmd_tx)?;
 
     // Build tray (pass profiles so the Profiles submenu is populated)
     let state_snapshot = state_shared.lock().unwrap();
@@ -100,8 +99,8 @@ fn run() -> Result<()> {
     }
 
     // Schedule first update check
-    let mut last_update_check = Instant::now()
-        - Duration::from_secs(config.updater.check_interval_h as u64 * 3600);
+    let mut last_update_check =
+        Instant::now() - Duration::from_secs(config.updater.check_interval_h as u64 * 3600);
 
     main_loop(
         cmd_rx,
@@ -282,10 +281,7 @@ fn main_loop(
                     let cfg = config_shared.lock().unwrap().clone();
                     match profiles::apply_profile(&name, &cfg, &mut state) {
                         Ok(()) => {
-                            notifications::notify_profile_switch(
-                                &name,
-                                &cfg.notifications,
-                            );
+                            notifications::notify_profile_switch(&name, &cfg.notifications);
                         }
                         Err(e) => eprintln!("apply_profile error: {e}"),
                     }

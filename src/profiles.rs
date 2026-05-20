@@ -4,11 +4,7 @@ use crate::{icons, taskbar, win_ops};
 use anyhow::Result;
 
 /// Apply a named profile: hide/show icons, taskbar, windows as specified.
-pub fn apply_profile(
-    name: &str,
-    config: &AppConfig,
-    state: &mut AppState,
-) -> Result<()> {
+pub fn apply_profile(name: &str, config: &AppConfig, state: &mut AppState) -> Result<()> {
     let profile = config
         .profiles
         .iter()

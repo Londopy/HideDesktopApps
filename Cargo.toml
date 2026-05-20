@@ -24,7 +24,7 @@ semver = { version = "1", features = ["serde"] }
 sha2 = "0.10"
 hex = "0.4"
 zip = "2"
-self_replace = "1"
+self-replace = "1"
 log = "0.4"
 env_logger = { version = "0.11", default-features = false }
 ctrlc = { version = "3", features = ["termination"] }
@@ -38,14 +38,4 @@ features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Threading",
-    "Win32_System_LibraryLoader",
-    "UI_Notifications",
-    "Data_Xml_Dom",
-    "Foundation",
-]
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
+    "Win32_System_L

@@ -1,5 +1,5 @@
-use std::io::{Read, Write};
 use std::fs::File;
+use std::io::{Read, Write};
 
 const DISCORD_APP_ID: &str = "1506489357534761111";
 
@@ -56,7 +56,9 @@ pub fn set_rich_presence(
     }
 
     std::thread::spawn(move || {
-        if let Err(e) = set_presence_inner(icons_hidden, taskbar_hidden, windows_hidden, active_profile) {
+        if let Err(e) =
+            set_presence_inner(icons_hidden, taskbar_hidden, windows_hidden, active_profile)
+        {
             eprintln!("Discord rich presence error: {e}");
         }
     });
@@ -83,9 +85,15 @@ fn set_presence_inner(
 
     // Details line: which things are currently hidden (spec format: "Icons · Taskbar hidden")
     let mut parts = Vec::new();
-    if icons_hidden { parts.push("Icons"); }
-    if taskbar_hidden { parts.push("Taskbar"); }
-    if windows_hidden { parts.push("Windows"); }
+    if icons_hidden {
+        parts.push("Icons");
+    }
+    if taskbar_hidden {
+        parts.push("Taskbar");
+    }
+    if windows_hidden {
+        parts.push("Windows");
+    }
     let details = format!("{} hidden", parts.join(" · "));
 
     // SAFETY: GetCurrentProcessId is always safe to call

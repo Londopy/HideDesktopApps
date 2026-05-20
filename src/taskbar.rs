@@ -1,9 +1,9 @@
 use anyhow::Result;
+use windows::core::w;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
     FindWindowW, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW,
 };
-use windows::core::w;
 
 /// Get the main taskbar HWND.
 fn get_taskbar() -> HWND {

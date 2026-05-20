@@ -5,8 +5,7 @@ use std::io::Write;
 
 const GITHUB_API_LATEST: &str =
     "https://api.github.com/repos/Londopy/HideDesktopApps/releases/latest";
-const GITHUB_API_RELEASES: &str =
-    "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
+const GITHUB_API_RELEASES: &str = "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
 
 /// Detect the current build architecture suffix used in release asset names.
 fn arch_suffix() -> &'static str {
@@ -22,11 +21,7 @@ fn arch_suffix() -> &'static str {
     {
         "arm64"
     }
-    #[cfg(not(any(
-        target_arch = "x86_64",
-        target_arch = "i686",
-        target_arch = "aarch64"
-    )))]
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "i686", target_arch = "aarch64")))]
     {
         "x64"
     }
@@ -47,10 +42,7 @@ struct GithubAsset {
 
 fn build_client() -> Result<reqwest::blocking::Client> {
     reqwest::blocking::Client::builder()
-        .user_agent(format!(
-            "HideDesktopApps/{}",
-            env!("CARGO_PKG_VERSION")
-        ))
+        .user_agent(format!("HideDesktopApps/{}", env!("CARGO_PKG_VERSION")))
         .build()
         .context("Building HTTP client")
 }
@@ -93,8 +85,7 @@ pub fn check_for_update(channel: &str) -> Result<Option<String>> {
     let remote_str = release.tag_name.trim_start_matches('v');
     let remote = Version::parse(remote_str)
         .with_context(|| format!("Parsing remote version '{}'", remote_str))?;
-    let current = Version::parse(env!("CARGO_PKG_VERSION"))
-        .context("Parsing current version")?;
+    let current = Version::parse(env!("CARGO_PKG_VERSION")).context("Parsing current version")?;
 
     if remote > current {
         Ok(Some(remote_str.to_string()))
@@ -143,7 +134,12 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
             .context("Downloading sha256")?
             .text()
             .context("Reading sha256 text")?;
-        let expected_hex = expected_hex.trim().split_whitespace().next().unwrap_or("").to_lowercase();
+        let expected_hex = expected_hex
+            .trim()
+            .split_whitespace()
+            .next()
+            .unwrap_or("")
+            .to_lowercase();
 
         let mut hasher = Sha256::new();
         hasher.update(&zip_bytes);

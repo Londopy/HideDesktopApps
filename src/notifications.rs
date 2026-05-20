@@ -35,10 +35,7 @@ fn escape_xml(s: &str) -> String {
 }
 
 /// Notify about an available update if notifications are enabled.
-pub fn notify_update_available(
-    version: &str,
-    config: &crate::config::NotificationsConfig,
-) {
+pub fn notify_update_available(version: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_update {
         return;
     }
@@ -51,10 +48,7 @@ pub fn notify_update_available(
 }
 
 /// Notify about a hotkey registration failure.
-pub fn notify_hotkey_failed(
-    hotkey: &str,
-    config: &crate::config::NotificationsConfig,
-) {
+pub fn notify_hotkey_failed(hotkey: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_hotkey_fail {
         return;
     }
@@ -67,10 +61,7 @@ pub fn notify_hotkey_failed(
 }
 
 /// Notify when a profile is activated.
-pub fn notify_profile_switch(
-    profile: &str,
-    config: &crate::config::NotificationsConfig,
-) {
+pub fn notify_profile_switch(profile: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_profile_switch {
         return;
     }

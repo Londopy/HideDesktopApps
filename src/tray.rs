@@ -132,11 +132,32 @@ pub fn build_icon_rgba(state: &AppState) -> Vec<u8> {
         // Top-left: Blue
         fill_rect(&mut buf, 0, 0, half - border, half - border, BLUE);
         // Top-right: Green
-        fill_rect(&mut buf, half + border, 0, half - border, half - border, GREEN);
+        fill_rect(
+            &mut buf,
+            half + border,
+            0,
+            half - border,
+            half - border,
+            GREEN,
+        );
         // Bottom-left: Red
-        fill_rect(&mut buf, 0, half + border, half - border, half - border, RED_QUAD);
+        fill_rect(
+            &mut buf,
+            0,
+            half + border,
+            half - border,
+            half - border,
+            RED_QUAD,
+        );
         // Bottom-right: Orange
-        fill_rect(&mut buf, half + border, half + border, half - border, half - border, ORANGE);
+        fill_rect(
+            &mut buf,
+            half + border,
+            half + border,
+            half - border,
+            half - border,
+            ORANGE,
+        );
 
         // White cross between quadrants
         fill_rect(&mut buf, half - border, 0, border * 2, ICON_SIZE, WHITE);

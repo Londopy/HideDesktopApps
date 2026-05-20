@@ -197,9 +197,15 @@ fn default_profiles() -> Vec<ProfileConfig> {
 pub fn config_dir() -> Result<PathBuf> {
     // Check for portable mode: if a file named "portable" exists next to the exe
     if let Ok(exe) = std::env::current_exe() {
-        let portable_marker = exe.parent().unwrap_or(std::path::Path::new(".")).join("portable");
+        let portable_marker = exe
+            .parent()
+            .unwrap_or(std::path::Path::new("."))
+            .join("portable");
         if portable_marker.exists() {
-            return Ok(exe.parent().unwrap_or(std::path::Path::new(".")).to_path_buf());
+            return Ok(exe
+                .parent()
+                .unwrap_or(std::path::Path::new("."))
+                .to_path_buf());
         }
     }
 
@@ -225,13 +231,19 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
 
     for line in content.lines() {
         let line = line.trim();
-        if line.starts_with('#') || line.starts_with(';') || line.is_empty() || line.starts_with('[') {
+        if line.starts_with('#')
+            || line.starts_with(';')
+            || line.is_empty()
+            || line.starts_with('[')
+        {
             continue;
         }
         if let Some((key, value)) = line.split_once('=') {
             // The Python ini used snake_case keys inside [Settings] etc.
             let key = key.trim().to_lowercase();
-            let key = key.trim_start_matches("settings.").trim_start_matches("hotkeys.");
+            let key = key
+                .trim_start_matches("settings.")
+                .trim_start_matches("hotkeys.");
             let value = value.trim();
             match key {
                 "hotkey_icons" | "icons" => {
@@ -331,8 +343,7 @@ pub fn load_config() -> Result<AppConfig> {
     let content = std::fs::read_to_string(&path)
         .with_context(|| format!("Reading config from {}", path.display()))?;
 
-    let config: AppConfig = toml::from_str(&content)
-        .with_context(|| "Parsing config.toml")?;
+    let config: AppConfig = toml::from_str(&content).with_context(|| "Parsing config.toml")?;
 
     Ok(config)
 }

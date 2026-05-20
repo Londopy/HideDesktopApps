@@ -1,9 +1,7 @@
 use anyhow::Result;
-use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, SendMessageTimeoutW, SMTO_ABORTIFHUNG,
-};
 use windows::core::w;
+use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, SendMessageTimeoutW, SMTO_ABORTIFHUNG};
 
 const WM_COMMAND: u32 = 0x0111;
 // Shell command to toggle desktop icon visibility
