@@ -98,9 +98,12 @@ fn run() -> Result<()> {
         }
     }
 
-    // Schedule first update check
-    let mut last_update_check =
-        Instant::now() - Duration::from_secs(config.updater.check_interval_h as u64 * 3600);
+    // Schedule first update check.
+    // Use checked_sub so we don't panic on systems with uptime shorter than the interval.
+    // If the subtraction underflows we fall back to now(), meaning the first check happens
+    // after one full interval rather than immediately — that's fine.
+    let interval = Duration::from_secs(config.updater.check_interval_h as u64 * 3600);
+    let mut last_update_check = Instant::now().checked_sub(interval).unwrap_or_else(Instant::now);
 
     main_loop(
         cmd_rx,
@@ -347,33 +350,4 @@ fn main_loop(
                 Cmd::Exit => {
                     // Restore everything cleanly before exiting
                     let mut state = state_shared.lock().unwrap();
-                    profiles::restore_all(&mut state);
-                    return Ok(());
-                }
-
-                Cmd::UpdateAvailable(version) => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    notifications::notify_update_available(&version, &cfg.notifications);
-                    eprintln!("Update available: {version}");
-                }
-
-                Cmd::HotkeyFailed(hotkey) => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    notifications::notify_hotkey_failed(&hotkey, &cfg.notifications);
-                }
-            }
-        }
-    }
-}
-
-/// Update Discord Rich Presence if enabled.
-fn update_discord(state: &AppState, config: &AppConfig) {
-    if config.discord.enabled {
-        discord::set_rich_presence(
-            state.icons_hidden,
-            state.taskbar_hidden,
-            state.windows_hidden,
-            state.active_profile.clone(),
-        );
-    }
-}
+                    profiles::restor
