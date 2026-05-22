@@ -15,7 +15,7 @@ AppPublisher=HideDesktopApps
 AppPublisherURL=https://github.com/Londopy/HideDesktopApps
 AppSupportURL=https://github.com/Londopy/HideDesktopApps/issues
 AppUpdatesURL=https://github.com/Londopy/HideDesktopApps/releases
-DefaultDirName={autopf}\HideDesktopApps
+DefaultDirName={localappdata}\HideDesktopApps
 DefaultGroupName=HideDesktopApps
 AllowNoIcons=yes
 ; Output goes to installer-output/ (created by CI)
