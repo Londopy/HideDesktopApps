@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write   # create release + upload assets
-  pull-requests: write  # open Scoop manifest update PR
 
 env:
   CARGO_TERM_COLOR: always
@@ -154,9 +153,10 @@ jobs:
           Get-ChildItem dist -Recurse -File | Move-Item -Destination dist -Force
           Remove-Item dist\* -Recurse -Include portable-*, installer-x64 -Force -ErrorAction SilentlyContinue
 
-          # Stash the x64 portable hash for the Scoop manifest step
-          $sha = (Get-Content (Get-ChildItem dist\*x64-portable.zip.sha256 | Select-Object -First 1)).Split(' ')[0]
-          echo "X64_SHA256=$sha" >> $env:GITHUB_ENV
+          # Consolidate all .sha256 sidecars into a single SHA256SUMS.txt
+          $lines = Get-ChildItem dist\*.sha256 | Sort-Object Name | ForEach-Object { Get-Content $_.FullName }
+          $lines | Set-Content dist\SHA256SUMS.txt -Encoding utf8NoBOM
+          Remove-Item dist\*.sha256 -Force
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -183,8 +183,11 @@ jobs:
             Download the ZIP for your architecture, extract, and run `HideDesktopApps.exe`.
 
             ---
-            SHA-256 checksums are provided alongside each download.
-          files: dist/*
+            SHA-256 checksums for all downloads are in `SHA256SUMS.txt`.
+          files: |
+            dist/*.exe
+            dist/*.zip
+            dist/SHA256SUMS.txt
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
