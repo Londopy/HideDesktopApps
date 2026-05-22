@@ -127,6 +127,21 @@ fn main_loop(
     let mut tray_handle = tray_handle;
 
     loop {
+        // Pump Win32 messages — tray_icon and global_hotkey both rely on a
+        // message loop on Windows. Without this the tray icon never appears
+        // and hotkeys never fire.
+        #[cfg(target_os = "windows")]
+        unsafe {
+            use windows::Win32::UI::WindowsAndMessaging::{
+                DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
+            };
+            let mut msg = MSG::default();
+            while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
+                let _ = TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+        }
+
         std::thread::sleep(Duration::from_millis(50));
 
         // ── Poll hotkey events ────────────────────────────────────────────
@@ -339,26 +354,4 @@ fn main_loop(
                 Cmd::UpdateAvailable(version) => {
                     let cfg = config_shared.lock().unwrap().clone();
                     notifications::notify_update_available(&version, &cfg.notifications);
-                    eprintln!("Update available: {version}");
-                }
-
-                Cmd::HotkeyFailed(hotkey) => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    notifications::notify_hotkey_failed(&hotkey, &cfg.notifications);
-                }
-            }
-        }
-    }
-}
-
-/// Update Discord Rich Presence if enabled.
-fn update_discord(state: &AppState, config: &AppConfig) {
-    if config.discord.enabled {
-        discord::set_rich_presence(
-            state.icons_hidden,
-            state.taskbar_hidden,
-            state.windows_hidden,
-            state.active_profile.clone(),
-        );
-    }
-}
+                    eprintln!("Upd
