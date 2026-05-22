@@ -10,6 +10,13 @@ Engine wallpaper or cleaning up for a presentation on demand.
 image:https://img.shields.io/github/v/release/Londopy/HideDesktopApps[GitHub release,link=https://github.com/Londopy/HideDesktopApps/releases/latest]
 image:https://img.shields.io/badge/License-MIT-yellow.svg[License: MIT,link=https://github.com/Londopy/HideDesktopApps/blob/main/LICENSE]
 image:https://img.shields.io/badge/platform-Windows%2010%2B-blue[Platform]
+image:https://github.com/Londopy/HideDeskTopApps/actions/workflows/release.yml/badge.svg[Release,link=https://github.com/Londopy/HideDesktopApps/actions/workflows/release.yml]
+image:https://img.shields.io/github/directory-file-count/Londopy/HideDeskTopApps[Files]
+image:https://img.shields.io/github/issues/Londopy/HideDeskTopApps[Issues]
+image:https://img.shields.io/github/languages/code-size/Londopy/HideDeskTopApps[Size]
+image:https://img.shields.io/badge/rust-1.78%2B-orange?logo=rust&logoColor=white[Rust, link=https://www.rust-lang.org]
+image:https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4?logo=windows&logoColor=white[Platform,link=https://github.com/Londopy/HideDeskTopApps/releases/latest]
+image:https://img.shields.io/github/downloads/Londopy/HideDeskTopApps/total?[GitHub Downloads]
 
 ---
 
