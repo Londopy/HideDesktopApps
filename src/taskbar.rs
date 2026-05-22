@@ -89,4 +89,14 @@ pub fn show_taskbar() -> Result<()> {
     Ok(())
 }
 
-/// Toggle taskba
+/// Toggle taskbar visibility.
+#[allow(dead_code)]
+pub fn toggle_taskbar() -> Result<bool> {
+    if is_taskbar_visible() {
+        hide_taskbar()?;
+        Ok(false)
+    } else {
+        show_taskbar()?;
+        Ok(true)
+    }
+}

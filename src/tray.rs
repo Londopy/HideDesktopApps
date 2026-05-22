@@ -280,3 +280,6 @@ pub fn poll_menu_event() -> Option<MenuEvent> {
 }
 
 /// Poll tray icon events (click, double-click) without blocking.
+pub fn poll_tray_event() -> Option<TrayIconEvent> {
+    TrayIconEvent::receiver().try_recv().ok()
+}
