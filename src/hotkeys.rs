@@ -156,9 +156,9 @@ pub fn register_hotkeys(
 
 /// Re-register hotkeys after a config change (unregister old ones first).
 pub fn reregister_hotkeys(
-    registered: &mut RegisteredHotkeys,
-    hotkeys_config: &crate::config::HotkeysConfig,
-    cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
+    _registered: &mut RegisteredHotkeys,
+    _hotkeys_config: &crate::config::HotkeysConfig,
+    _cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
 ) {
     // Unregister all current hotkeys
 }
