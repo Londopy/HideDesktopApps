@@ -222,3 +222,4 @@ jobs:
           title: "scoop: bump to ${{ github.ref_name }}"
           body: "Automated manifest update from release workflow."
           branch: scoop-update-${{ github.ref_name }}
+          base: main
