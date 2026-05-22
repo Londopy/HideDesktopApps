@@ -18,6 +18,8 @@ Register-ScheduledTask -TaskName 'HideDesktopApps' -Action $action -Trigger $tri
 
     let output = std::process::Command::new("powershell")
         .args([
+            "-ExecutionPolicy",
+            "Bypass",
             "-WindowStyle",
             "Hidden",
             "-NonInteractive",
@@ -38,6 +40,8 @@ Register-ScheduledTask -TaskName 'HideDesktopApps' -Action $action -Trigger $tri
 pub fn unregister() -> Result<()> {
     let output = std::process::Command::new("powershell")
         .args([
+            "-ExecutionPolicy",
+            "Bypass",
             "-WindowStyle",
             "Hidden",
             "-NonInteractive",
@@ -58,6 +62,8 @@ pub fn unregister() -> Result<()> {
 pub fn is_registered() -> bool {
     let out = std::process::Command::new("powershell")
         .args([
+            "-ExecutionPolicy",
+            "Bypass",
             "-WindowStyle",
             "Hidden",
             "-NonInteractive",
@@ -74,10 +80,4 @@ pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
     if config.enabled {
         if let Err(e) = register(exe_path, config.delay_s) {
             eprintln!("Failed to register startup task: {e}");
-        }
-    } else if is_registered() {
-        if let Err(e) = unregister() {
-            eprintln!("Failed to unregister startup task: {e}");
-        }
-    }
-}
+  

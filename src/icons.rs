@@ -1,14 +1,14 @@
 use anyhow::Result;
 use windows::core::w;
 use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, SendMessageTimeoutW, SMTO_ABORTIFHUNG};
+use windows::Win32::UI::WindowsAndMessaging::{
+    FindWindowW, SendMessageTimeoutW, SMTO_ABORTIFHUNG,
+};
 
 const WM_COMMAND: u32 = 0x0111;
-// Shell command to toggle desktop icon visibility
 const SHCMD_TOGGLE_DESKTOP_ICONS: u32 = 0x7402;
 
 fn get_progman() -> HWND {
-    // SAFETY: FFI call to find the Progman window which hosts desktop icons
     unsafe {
         FindWindowW(w!("Progman"), windows::core::PCWSTR::null())
             .unwrap_or(HWND(std::ptr::null_mut()))
@@ -16,32 +16,28 @@ fn get_progman() -> HWND {
 }
 
 fn get_shell_defview() -> Option<HWND> {
-    // SAFETY: FFI calls to traverse the window hierarchy to find ShellDefView
     unsafe {
         let progman = get_progman();
-        if progman.0.is_null() {
-            return None;
+        if !progman.0.is_null() {
+            let dv = windows::Win32::UI::WindowsAndMessaging::FindWindowExW(
+                progman,
+                HWND(std::ptr::null_mut()),
+                w!("SHELLDLL_DefView"),
+                windows::core::PCWSTR::null(),
+            )
+            .unwrap_or(HWND(std::ptr::null_mut()));
+            if !dv.0.is_null() {
+                return Some(dv);
+            }
         }
 
-        let defview = windows::Win32::UI::WindowsAndMessaging::FindWindowExW(
-            progman,
-            HWND(std::ptr::null_mut()),
-            w!("SHELLDLL_DefView"),
-            windows::core::PCWSTR::null(),
-        )
-        .unwrap_or(HWND(std::ptr::null_mut()));
-
-        if !defview.0.is_null() {
-            return Some(defview);
-        }
-
-        // Desktop icons may be hosted inside a WorkerW instead of Progman
+        // On Windows 11 DefView may be hosted inside a WorkerW, not Progman.
         let mut found = HWND(std::ptr::null_mut());
+
         unsafe extern "system" fn find_defview_cb(
             hwnd: HWND,
             lparam: windows::Win32::Foundation::LPARAM,
         ) -> windows::Win32::Foundation::BOOL {
-            // SAFETY: lparam is a valid pointer to HWND that we passed in
             let target = &mut *(lparam.0 as *mut HWND);
             let dv = windows::Win32::UI::WindowsAndMessaging::FindWindowExW(
                 hwnd,
@@ -72,11 +68,13 @@ fn get_shell_defview() -> Option<HWND> {
 
 /// Returns true if desktop icons are currently visible.
 pub fn are_icons_visible() -> bool {
-    // SAFETY: FFI call to find the SysListView32 which is the icon container
     unsafe {
         let defview = match get_shell_defview() {
             Some(dv) => dv,
-            None => return true,
+            None => {
+                crate::dlog!("are_icons_visible: SHELLDLL_DefView not found, assuming visible");
+                return true;
+            }
         };
 
         let listview = windows::Win32::UI::WindowsAndMessaging::FindWindowExW(
@@ -88,23 +86,37 @@ pub fn are_icons_visible() -> bool {
         .unwrap_or(HWND(std::ptr::null_mut()));
 
         if listview.0.is_null() {
+            crate::dlog!("are_icons_visible: SysListView32 not found, assuming visible");
             return true;
         }
 
-        windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(listview).as_bool()
+        let visible =
+            windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(listview).as_bool();
+        crate::dlog!("are_icons_visible: SysListView32 visible = {visible}");
+        visible
     }
 }
 
-/// Toggle desktop icon visibility by sending a WM_COMMAND to the ShellDefView.
+/// Toggle desktop icon visibility by sending WM_COMMAND(0x7402) to
+/// SHELLDLL_DefView. Falls back to Progman if DefView is not found.
 pub fn toggle_icons() -> Result<()> {
-    // SAFETY: FFI calls to send a shell command that toggles icon visibility
     unsafe {
-        let progman = get_progman();
-        anyhow::ensure!(!progman.0.is_null(), "Could not find Progman window");
+        let target = match get_shell_defview() {
+            Some(dv) => {
+                crate::dlog!("toggle_icons: target = SHELLDLL_DefView");
+                dv
+            }
+            None => {
+                let progman = get_progman();
+                anyhow::ensure!(!progman.0.is_null(), "Could not find Progman window");
+                crate::dlog!("toggle_icons: target = Progman (fallback)");
+                progman
+            }
+        };
 
         let mut result = 0usize;
         SendMessageTimeoutW(
-            progman,
+            target,
             WM_COMMAND,
             windows::Win32::Foundation::WPARAM(SHCMD_TOGGLE_DESKTOP_ICONS as usize),
             windows::Win32::Foundation::LPARAM(0),
@@ -112,22 +124,29 @@ pub fn toggle_icons() -> Result<()> {
             1000,
             Some(&mut result),
         );
+        crate::dlog!("toggle_icons: WM_COMMAND sent, result = {result}");
     }
     Ok(())
 }
 
-/// Hide desktop icons. If already hidden, does nothing.
+/// Hide desktop icons. Does nothing if already hidden.
 pub fn hide_icons() -> Result<()> {
+    crate::dlog!("hide_icons called");
     if are_icons_visible() {
         toggle_icons()?;
+    } else {
+        crate::dlog!("hide_icons: already hidden, skipping");
     }
     Ok(())
 }
 
-/// Show desktop icons. If already visible, does nothing.
+/// Show desktop icons. Does nothing if already visible.
 pub fn show_icons() -> Result<()> {
+    crate::dlog!("show_icons called");
     if !are_icons_visible() {
         toggle_icons()?;
+    } else {
+        crate::dlog!("show_icons: already visible, skipping");
     }
     Ok(())
 }

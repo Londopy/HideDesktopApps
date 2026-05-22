@@ -4,6 +4,8 @@ mod config;
 mod discord;
 mod hotkeys;
 mod icons;
+#[macro_use]
+mod log_util;
 mod notifications;
 mod profiles;
 mod startup;
@@ -58,6 +60,7 @@ fn main() {
 }
 
 fn run() -> Result<()> {
+    dlog!("--- HideDesktopApps starting ---");
     let config = config::load_config()?;
     let config_shared = Arc::new(Mutex::new(config.clone()));
     let state_shared = Arc::new(Mutex::new(AppState::default()));
@@ -236,15 +239,18 @@ fn main_loop(
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
                 Cmd::ToggleIcons => {
+                    dlog!("Cmd::ToggleIcons received");
                     let mut state = state_shared.lock().unwrap();
                     if state.icons_hidden {
                         if let Err(e) = icons::show_icons() {
+                            dlog!("show_icons error: {e}");
                             eprintln!("show_icons error: {e}");
                         } else {
                             state.icons_hidden = false;
                         }
                     } else {
                         if let Err(e) = icons::hide_icons() {
+                            dlog!("hide_icons error: {e}");
                             eprintln!("hide_icons error: {e}");
                         } else {
                             state.icons_hidden = true;
@@ -255,15 +261,18 @@ fn main_loop(
                 }
 
                 Cmd::ToggleTaskbar => {
+                    dlog!("Cmd::ToggleTaskbar received");
                     let mut state = state_shared.lock().unwrap();
                     if state.taskbar_hidden {
                         if let Err(e) = taskbar::show_taskbar() {
+                            dlog!("show_taskbar error: {e}");
                             eprintln!("show_taskbar error: {e}");
                         } else {
                             state.taskbar_hidden = false;
                         }
                     } else {
                         if let Err(e) = taskbar::hide_taskbar() {
+                            dlog!("hide_taskbar error: {e}");
                             eprintln!("hide_taskbar error: {e}");
                         } else {
                             state.taskbar_hidden = true;
@@ -274,10 +283,12 @@ fn main_loop(
                 }
 
                 Cmd::ToggleWindows => {
+                    dlog!("Cmd::ToggleWindows received");
                     let mut state = state_shared.lock().unwrap();
                     let cfg = config_shared.lock().unwrap().clone();
                     if state.windows_hidden {
                         if let Err(e) = win_ops::restore_windows(&state.hidden_windows) {
+                            dlog!("restore_windows error: {e}");
                             eprintln!("restore_windows error: {e}");
                         } else {
                             state.hidden_windows.clear();
@@ -289,7 +300,10 @@ fn main_loop(
                                 state.hidden_windows = hidden;
                                 state.windows_hidden = true;
                             }
-                            Err(e) => eprintln!("hide_windows error: {e}"),
+                            Err(e) => {
+                                dlog!("hide_windows error: {e}");
+                                eprintln!("hide_windows error: {e}");
+                            }
                         }
                     }
                     tray::update_tray(&tray_handle, &state);
@@ -329,56 +343,10 @@ fn main_loop(
                 }
 
                 Cmd::OpenSettings => {
+                    dlog!("Cmd::OpenSettings received");
                     ui::open_settings(Arc::clone(&config_shared), cmd_tx.clone());
                 }
 
                 Cmd::CheckForUpdates => {
                     let cfg = config_shared.lock().unwrap().clone();
-                    updater::background_check(cfg.updater, cmd_tx.clone());
-                }
-
-                Cmd::Restart => {
-                    // Restore all before restarting
-                    {
-                        let mut state = state_shared.lock().unwrap();
-                        profiles::restore_all(&mut state);
-                    }
-                    let exe = std::env::current_exe()
-                        .unwrap_or_else(|_| std::path::PathBuf::from("HideDesktopApps.exe"));
-                    let _ = std::process::Command::new(exe).spawn();
-                    return Ok(());
-                }
-
-                Cmd::Exit => {
-                    // Restore everything cleanly before exiting
-                    let mut state = state_shared.lock().unwrap();
-                    profiles::restore_all(&mut state);
-                    return Ok(());
-                }
-
-                Cmd::UpdateAvailable(version) => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    notifications::notify_update_available(&version, &cfg.notifications);
-                    eprintln!("Update available: {version}");
-                }
-
-                Cmd::HotkeyFailed(hotkey) => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    notifications::notify_hotkey_failed(&hotkey, &cfg.notifications);
-                }
-            }
-        }
-    }
-}
-
-/// Update Discord Rich Presence if enabled.
-fn update_discord(state: &AppState, config: &AppConfig) {
-    if config.discord.enabled {
-        discord::set_rich_presence(
-            state.icons_hidden,
-            state.taskbar_hidden,
-            state.windows_hidden,
-            state.active_profile.clone(),
-        );
-    }
-}
+                    updater::background_check(cfg.updater, cmd_t

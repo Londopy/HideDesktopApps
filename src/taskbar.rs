@@ -60,11 +60,12 @@ pub fn is_taskbar_visible() -> bool {
 /// Hide the taskbar (main + all secondary monitors).
 pub fn hide_taskbar() -> Result<()> {
     let primary = get_taskbar();
-    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window");
+    crate::dlog!("hide_taskbar: primary HWND is null = {}", primary.0.is_null());
+    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window (Shell_TrayWnd)");
 
-    // SAFETY: FFI ShowWindow calls are safe when the HWND is valid
     unsafe {
-        let _ = ShowWindow(primary, SW_HIDE);
+        let r = ShowWindow(primary, SW_HIDE);
+        crate::dlog!("hide_taskbar: ShowWindow(primary, SW_HIDE) = {r:?}");
         for secondary in get_secondary_taskbars() {
             let _ = ShowWindow(secondary, SW_HIDE);
         }
@@ -75,11 +76,12 @@ pub fn hide_taskbar() -> Result<()> {
 /// Show the taskbar (main + all secondary monitors).
 pub fn show_taskbar() -> Result<()> {
     let primary = get_taskbar();
-    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window");
+    crate::dlog!("show_taskbar: primary HWND is null = {}", primary.0.is_null());
+    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window (Shell_TrayWnd)");
 
-    // SAFETY: FFI ShowWindow calls are safe when the HWND is valid
     unsafe {
-        let _ = ShowWindow(primary, SW_SHOW);
+        let r = ShowWindow(primary, SW_SHOW);
+        crate::dlog!("show_taskbar: ShowWindow(primary, SW_SHOW) = {r:?}");
         for secondary in get_secondary_taskbars() {
             let _ = ShowWindow(secondary, SW_SHOW);
         }
@@ -87,14 +89,4 @@ pub fn show_taskbar() -> Result<()> {
     Ok(())
 }
 
-/// Toggle taskbar visibility.
-#[allow(dead_code)]
-pub fn toggle_taskbar() -> Result<bool> {
-    if is_taskbar_visible() {
-        hide_taskbar()?;
-        Ok(false)
-    } else {
-        show_taskbar()?;
-        Ok(true)
-    }
-}
+/// Toggle taskba

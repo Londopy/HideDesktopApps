@@ -151,7 +151,5 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mp
         );
 
         if let Err(e) = result {
-            eprintln!("Settings window error: {e}");
-        }
-    });
-}
+            crate::dlog!("Settings window error: {e}");
+            eprin

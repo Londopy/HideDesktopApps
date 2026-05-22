@@ -259,6 +259,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
         .with_menu(Box::new(menu))
         .with_icon(icon)
         .with_tooltip(tooltip)
+        .with_menu_on_left_click(false) // left click fires the click event; right click shows menu
         .build()?;
 
     Ok(TrayHandle { tray, ids })
@@ -279,6 +280,3 @@ pub fn poll_menu_event() -> Option<MenuEvent> {
 }
 
 /// Poll tray icon events (click, double-click) without blocking.
-pub fn poll_tray_event() -> Option<TrayIconEvent> {
-    TrayIconEvent::receiver().try_recv().ok()
-}
