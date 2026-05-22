@@ -28,6 +28,7 @@ Press a hotkey (or click the tray icon) and your desktop icons, taskbar, and ope
 
 *A few things people use it for:*
 
+* **Windows ricing** — toggle the taskbar and icons on and off to match your desktop aesthetic, take clean screenshots, or switch between layouts without touching a single setting
 * **Streaming / going live** — hide your personal windows before your screen goes live, bring them back after with one key press
 * **Wallpaper Engine** — reveal your animated wallpaper without minimising or closing anything
 * **Presentations** — clean up your screen before sharing, no need to manually minimise everything
@@ -175,81 +176,4 @@ Right-click the tray icon → *Settings…* to open a tabbed window:
 * **Profiles** — create, edit, and delete named state snapshots; assign
   individual hotkeys.
 * **Startup** — toggle auto-start and set the login delay (0–120 s).
-* **Notifications** — master toggle and per-event checkboxes (update, hotkey
-  fail, profile switch).
-* **Updater** — channel (stable/beta), check interval, manual check button.
-* **Discord** — enable/disable Rich Presence.
-* **About** — version, build target, links, "Copy debug info" button.
-
----
-
-== Recovery
-
-=== Taskbar hidden and can't reach the tray
-
-Open *Run* (Win+R) and type:
-
-[source,powershell]
-----
-powershell -Command "Add-Type -N System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize"
-----
-
-Or just press Ctrl+Alt+T — the hotkey works even without the taskbar visible.
-
-=== All windows hidden
-
-Press Ctrl+Alt+W again, or right-click the tray icon → *Toggle App Windows*.
-
-=== App not in tray after a crash
-
-Hidden windows stay hidden until the app restores them. Restarting
-HideDesktopApps will restore them automatically because the app checks state
-on startup. If that doesn't work, reboot — Windows restores all window
-visibility on logon.
-
----
-
-== Building from source
-
-[source,bash]
-----
-# x64
-cargo build --release --target x86_64-pc-windows-msvc
-
-# ARM64 (cross-compiles from x64)
-cargo build --release --target aarch64-pc-windows-msvc
-----
-
-Requires the `windows-latest` GitHub Actions runner or a Windows machine with
-Visual Studio Build Tools + the relevant MSVC target installed.
-
----
-
-== File layout
-
-----
-HideDesktopApps/
-├── src/                    Rust source
-│   ├── main.rs
-│   ├── config.rs
-│   ├── ui/                 egui settings window
-│   └── ...
-├── assets/
-│   └── installer.iss       Inno Setup script
-├── scoop/
-│   └── HideDesktopApps.json  Scoop manifest
-├── winget/
-│   └── manifests/          WinGet manifest tree
-├── .github/workflows/      CI (ci.yml) + release (release.yml)
-├── Cargo.toml
-├── LICENSE
-├── LICENSE-COMMERCIAL
-└── README.adoc             this file
-----
-
----
-
-== License
-
-MIT for personal and open-source use. See link:LICENSE-COMMERCIAL[] for
-commercial licensing.
+* **Notificatio
