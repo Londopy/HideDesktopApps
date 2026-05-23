@@ -2,7 +2,7 @@
 :toc:
 :toc-placement: preamble
 :icons: font
-
+ 
 A lightweight Windows system-tray utility that hides and shows desktop icons,
 the taskbar, and open application windows — perfect for ricing, revealing a Wallpaper
 Engine wallpaper or cleaning up for a presentation on demand.
