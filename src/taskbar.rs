@@ -60,8 +60,14 @@ pub fn is_taskbar_visible() -> bool {
 /// Hide the taskbar (main + all secondary monitors).
 pub fn hide_taskbar() -> Result<()> {
     let primary = get_taskbar();
-    crate::dlog!("hide_taskbar: primary HWND is null = {}", primary.0.is_null());
-    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window (Shell_TrayWnd)");
+    crate::dlog!(
+        "hide_taskbar: primary HWND is null = {}",
+        primary.0.is_null()
+    );
+    anyhow::ensure!(
+        !primary.0.is_null(),
+        "Could not find taskbar window (Shell_TrayWnd)"
+    );
 
     unsafe {
         let r = ShowWindow(primary, SW_HIDE);
@@ -76,8 +82,14 @@ pub fn hide_taskbar() -> Result<()> {
 /// Show the taskbar (main + all secondary monitors).
 pub fn show_taskbar() -> Result<()> {
     let primary = get_taskbar();
-    crate::dlog!("show_taskbar: primary HWND is null = {}", primary.0.is_null());
-    anyhow::ensure!(!primary.0.is_null(), "Could not find taskbar window (Shell_TrayWnd)");
+    crate::dlog!(
+        "show_taskbar: primary HWND is null = {}",
+        primary.0.is_null()
+    );
+    anyhow::ensure!(
+        !primary.0.is_null(),
+        "Could not find taskbar window (Shell_TrayWnd)"
+    );
 
     unsafe {
         let r = ShowWindow(primary, SW_SHOW);

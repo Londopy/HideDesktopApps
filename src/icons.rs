@@ -1,9 +1,7 @@
 use anyhow::Result;
 use windows::core::w;
 use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, SendMessageTimeoutW, SMTO_ABORTIFHUNG,
-};
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, SendMessageTimeoutW, SMTO_ABORTIFHUNG};
 
 const WM_COMMAND: u32 = 0x0111;
 const SHCMD_TOGGLE_DESKTOP_ICONS: u32 = 0x7402;
@@ -90,8 +88,7 @@ pub fn are_icons_visible() -> bool {
             return true;
         }
 
-        let visible =
-            windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(listview).as_bool();
+        let visible = windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(listview).as_bool();
         crate::dlog!("are_icons_visible: SysListView32 visible = {visible}");
         visible
     }
