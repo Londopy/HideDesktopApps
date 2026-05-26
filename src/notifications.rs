@@ -47,6 +47,20 @@ pub fn notify_update_available(version: &str, config: &crate::config::Notificati
     }
 }
 
+/// Notify the user when they manually checked and are already on the latest version.
+pub fn notify_up_to_date(config: &crate::config::NotificationsConfig) {
+    if !config.enabled || !config.on_update {
+        return;
+    }
+    let version = env!("CARGO_PKG_VERSION");
+    if let Err(e) = show_toast(
+        "HideDesktopApps",
+        &format!("You are up to date. (v{})", version),
+    ) {
+        eprintln!("Toast notification failed: {e}");
+    }
+}
+
 /// Notify about a hotkey registration failure.
 pub fn notify_hotkey_failed(hotkey: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_hotkey_fail {
@@ -60,12 +74,15 @@ pub fn notify_hotkey_failed(hotkey: &str, config: &crate::config::NotificationsC
     }
 }
 
-/// Notify the user when they manually checked for updates and are already on the latest version.
-pub fn notify_up_to_date(config: &crate::config::NotificationsConfig) {
-    if !config.enabled || !config.on_update {
+/// Notify when a profile is activated.
+pub fn notify_profile_switch(profile: &str, config: &crate::config::NotificationsConfig) {
+    if !config.enabled || !config.on_profile_switch {
         return;
     }
-    let version = env!("CARGO_PKG_VERSION");
     if let Err(e) = show_toast(
         "HideDesktopApps",
-        &format!("You're up to date. (v{version
+        &format!("Profile '{}' activated.", profile),
+    ) {
+        eprintln!("Toast notification failed: {e}");
+    }
+}
