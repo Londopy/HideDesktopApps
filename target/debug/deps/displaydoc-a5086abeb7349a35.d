@@ -1,8 +1,0 @@
-/sessions/jolly-determined-wozniak/mnt/HideDesktopApps/target/debug/deps/displaydoc-a5086abeb7349a35.d: /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/lib.rs /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/attr.rs /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/expand.rs /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/fmt.rs
-
-/sessions/jolly-determined-wozniak/mnt/HideDesktopApps/target/debug/deps/libdisplaydoc-a5086abeb7349a35.so: /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/lib.rs /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/attr.rs /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/expand.rs /sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/fmt.rs
-
-/sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/lib.rs:
-/sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/attr.rs:
-/sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/expand.rs:
-/sessions/jolly-determined-wozniak/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/displaydoc-0.2.5/src/fmt.rs:
