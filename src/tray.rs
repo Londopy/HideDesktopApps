@@ -6,6 +6,7 @@ use crate::config::ProfileConfig;
 use crate::state::AppState;
 
 /// IDs for tray menu items, including one entry per profile.
+#[derive(Clone)]
 pub struct TrayMenuIds {
     pub toggle_icons: tray_icon::menu::MenuId,
     pub toggle_taskbar: tray_icon::menu::MenuId,
@@ -259,7 +260,6 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
         .with_menu(Box::new(menu))
         .with_icon(icon)
         .with_tooltip(tooltip)
-        .with_menu_on_left_click(false) // left click fires the click event; right click shows menu
         .build()?;
 
     Ok(TrayHandle { tray, ids })

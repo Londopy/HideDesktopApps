@@ -1,89 +1,44 @@
 use anyhow::Result;
+use winreg::enums::*;
+use winreg::RegKey;
 
-/// Register a Task Scheduler ONLOGON task via PowerShell.
-pub fn register(exe_path: &str, delay_s: u32) -> Result<()> {
-    let delay_iso = format!("PT{}S", delay_s);
-    let script = format!(
-        r#"
-$action = New-ScheduledTaskAction -Execute '{exe}'
-$trigger = New-ScheduledTaskTrigger -AtLogOn
-$trigger.Delay = '{delay}'
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit 0
-$principal = New-ScheduledTaskPrincipal -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -RunLevel Limited
-Register-ScheduledTask -TaskName 'HideDesktopApps' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
-"#,
-        exe = exe_path,
-        delay = delay_iso
-    );
+const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+const APP_NAME: &str = "HideDesktopApps";
 
-    let output = std::process::Command::new("powershell")
-        .args([
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-NonInteractive",
-            "-Command",
-            &script,
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        eprintln!("Startup register warning: {stderr}");
-    }
-
+/// Add the app to HKCU\...\Run so it starts at login.
+pub fn register(exe_path: &str, _delay_s: u32) -> Result<()> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let (run_key, _) = hkcu.create_subkey(RUN_KEY)?;
+    run_key.set_value(APP_NAME, &exe_path.to_string())?;
     Ok(())
 }
 
-/// Unregister the Task Scheduler task.
+/// Remove the app from HKCU\...\Run.
 pub fn unregister() -> Result<()> {
-    let output = std::process::Command::new("powershell")
-        .args([
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-NonInteractive",
-            "-Command",
-            "Unregister-ScheduledTask -TaskName 'HideDesktopApps' -Confirm:$false 2>$null",
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        eprintln!("Startup unregister warning: {stderr}");
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(run_key) = hkcu.open_subkey_with_flags(RUN_KEY, KEY_WRITE) {
+        run_key.delete_value(APP_NAME).ok();
     }
-
     Ok(())
 }
 
-/// Check whether the task is currently registered.
+/// Returns true if the app is registered in HKCU\...\Run.
 pub fn is_registered() -> bool {
-    let out = std::process::Command::new("powershell")
-        .args([
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-NonInteractive",
-            "-Command",
-            "Get-ScheduledTask -TaskName 'HideDesktopApps' -ErrorAction SilentlyContinue",
-        ])
-        .output();
-
-    out.map(|o| !o.stdout.is_empty()).unwrap_or(false)
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    hkcu.open_subkey(RUN_KEY)
+        .and_then(|k| k.get_value::<String, _>(APP_NAME))
+        .is_ok()
 }
 
-/// Sync the startup task to match the config: register if enabled, unregister if disabled.
+/// Sync the startup entry to match the config: register if enabled, remove if disabled.
 pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
     if config.enabled {
         if let Err(e) = register(exe_path, config.delay_s) {
-            eprintln!("Failed to register startup task: {e}");
+            eprintln!("Failed to register startup: {e}");
         }
     } else if is_registered() {
         if let Err(e) = unregister() {
-            eprintln!("Failed to unregister startup task: {e}");
+            eprintln!("Failed to unregister startup: {e}");
         }
     }
 }

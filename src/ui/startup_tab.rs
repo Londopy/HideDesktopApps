@@ -10,29 +10,23 @@ impl SettingsApp {
             &mut self.config.startup.enabled,
             "Start HideDesktopApps at Windows logon",
         );
-        ui.label("Uses Windows Task Scheduler (runs without UAC prompt).");
-
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            ui.label("Startup delay:");
-            ui.add(egui::Slider::new(&mut self.config.startup.delay_s, 0..=60).suffix(" seconds"));
-        });
+        ui.label("Adds the app to the Windows registry Run key (HKCU).");
 
         ui.add_space(8.0);
         ui.separator();
 
         let registered = self.startup_registered;
         ui.label(if registered {
-            "Status: Task Scheduler task is registered."
+            "Status: Registered in startup."
         } else {
-            "Status: Not registered in Task Scheduler."
+            "Status: Not registered in startup."
         });
 
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             if ui.button("Register Now").clicked() {
                 let exe = crate::win_ops::current_exe_path();
-                if let Err(e) = crate::startup::register(&exe, self.config.startup.delay_s) {
+                if let Err(e) = crate::startup::register(&exe, 0) {
                     eprintln!("Startup register error: {e}");
                 } else {
                     self.startup_registered = true;

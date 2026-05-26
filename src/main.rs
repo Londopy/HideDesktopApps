@@ -150,7 +150,7 @@ fn main_loop(
             }
         }
 
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(16));
 
         // ── Poll hotkey events ────────────────────────────────────────────
         while let Some(event) = hotkeys::poll_hotkey_event() {
@@ -179,6 +179,7 @@ fn main_loop(
 
         // ── Poll tray menu events ─────────────────────────────────────────
         while let Some(event) = tray::poll_menu_event() {
+            dlog!("menu event: id={:?}", event.id);
             let id = &event.id;
             if id == &tray_handle.ids.toggle_icons {
                 let _ = cmd_tx.send(Cmd::ToggleIcons);
@@ -205,23 +206,16 @@ fn main_loop(
             }
         }
 
-        // ── Poll tray icon events (double-click opens settings) ───────────
+        // ── Poll tray icon events (double-click toggles icons) ───────────
         while let Some(event) = tray::poll_tray_event() {
-            use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } = event
-            {
-                let _ = cmd_tx.send(Cmd::ToggleIcons);
-            }
+            use tray_icon::{MouseButton, TrayIconEvent};
             if let TrayIconEvent::DoubleClick {
                 button: MouseButton::Left,
                 ..
             } = event
             {
-                let _ = cmd_tx.send(Cmd::OpenSettings);
+                dlog!("tray double-click: ToggleIcons");
+                let _ = cmd_tx.send(Cmd::ToggleIcons);
             }
         }
 
