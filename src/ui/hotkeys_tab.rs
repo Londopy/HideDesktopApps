@@ -93,19 +93,22 @@ impl SettingsApp {
             &self.config.hotkeys.windows.clone(),
         );
 
-        self.config.hotkeys.icons = new_icons;
-        self.config.hotkeys.taskbar = new_taskbar;
-        self.config.hotkeys.windows = new_windows;
+        if new_icons != self.config.hotkeys.icons
+            || new_taskbar != self.config.hotkeys.taskbar
+            || new_windows != self.config.hotkeys.windows
+        {
+            self.config.hotkeys.icons = new_icons;
+            self.config.hotkeys.taskbar = new_taskbar;
+            self.config.hotkeys.windows = new_windows;
+            self.dirty = true;
+        }
 
-        // Inline duplicate warning
+        // Inline duplicate warning — save is blocked until this clears.
         let h = &self.config.hotkeys;
-        let icons = h.icons.clone();
-        let taskbar = h.taskbar.clone();
-        let windows = h.windows.clone();
-        if icons == taskbar || icons == windows || taskbar == windows {
+        if h.icons == h.taskbar || h.icons == h.windows || h.taskbar == h.windows {
             ui.colored_label(
                 egui::Color32::YELLOW,
-                "Warning: duplicate hotkeys detected. All three must be unique.",
+                "Warning: duplicate hotkeys — all three must be unique.",
             );
         }
     }

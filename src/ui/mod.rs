@@ -8,7 +8,11 @@ mod updater_tab;
 
 use crate::config::AppConfig;
 use crate::Cmd;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+
+// Prevents opening a second settings window while one is already showing.
+static SETTINGS_OPEN: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -52,9 +56,10 @@ pub struct SettingsApp {
     pub config_shared: Arc<Mutex<AppConfig>>,
     pub cmd_tx: std::sync::mpsc::Sender<Cmd>,
     pub current_tab: Tab,
-    pub hotkey_error: Option<String>,
     pub update_status: Option<String>,
     pub startup_registered: bool,
+    /// Set to true by any tab that modifies config; triggers a save at end of frame.
+    pub dirty: bool,
 }
 
 impl SettingsApp {
@@ -66,33 +71,22 @@ impl SettingsApp {
             config_shared,
             cmd_tx,
             current_tab: Tab::Hotkeys,
-            hotkey_error: None,
             update_status: None,
             startup_registered,
+            dirty: false,
         }
     }
 
-    fn apply(&mut self) {
-        // Validate hotkeys are unique
-        let h = &self.config.hotkeys;
-        if h.icons == h.taskbar || h.icons == h.windows || h.taskbar == h.windows {
-            self.hotkey_error = Some("All three hotkeys must be unique.".to_string());
-            return;
-        }
-        self.hotkey_error = None;
-
-        // Persist config to disk
+    /// Persist the current config to disk and notify the main loop.
+    /// Does not validate hotkeys — the hotkeys tab handles that inline.
+    pub fn save_now(&mut self) {
         if let Err(e) = crate::config::save_config(&self.config) {
             eprintln!("Failed to save config: {e}");
         }
-
-        // Update the shared config so other threads can see it
         {
             let mut shared = self.config_shared.lock().unwrap();
             *shared = self.config.clone();
         }
-
-        // Notify main loop
         let _ = self.cmd_tx.send(Cmd::ConfigUpdated(self.config.clone()));
     }
 }
@@ -116,31 +110,28 @@ impl eframe::App for SettingsApp {
                 Tab::Discord => self.discord_tab(ui),
                 Tab::About => self.about_tab(ui),
             });
-
-            ui.separator();
-
-            // Hotkey validation error only applies on the Hotkeys tab
-            if self.current_tab == Tab::Hotkeys {
-                if let Some(ref err) = self.hotkey_error.clone() {
-                    ui.colored_label(egui::Color32::RED, err);
-                }
-            }
-
-            ui.horizontal(|ui| {
-                // Apply & Save doesn't make sense on the About tab
-                if self.current_tab != Tab::About && ui.button("Apply & Save").clicked() {
-                    self.apply();
-                }
-                if ui.button("Close").clicked() {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                }
-            });
         });
+
+        // Auto-save at end of frame if anything changed.
+        // Skip if hotkeys are currently invalid (duplicate) — the tab shows a warning.
+        if self.dirty {
+            self.dirty = false;
+            let h = &self.config.hotkeys;
+            let hotkeys_ok = h.icons != h.taskbar && h.icons != h.windows && h.taskbar != h.windows;
+            if hotkeys_ok {
+                self.save_now();
+            }
+        }
     }
 }
 
-/// Open the Settings window on a background thread so the main loop keeps running.
+/// Open the settings window on a background thread so the main loop keeps running.
+/// If a settings window is already open, this is a no-op.
 pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mpsc::Sender<Cmd>) {
+    if SETTINGS_OPEN.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
     std::thread::spawn(move || {
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -164,5 +155,8 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mp
             crate::dlog!("Settings window error: {}", e);
             eprintln!("Settings window error: {e}");
         }
+
+        // Allow the settings window to be opened again.
+        SETTINGS_OPEN.store(false, Ordering::SeqCst);
     });
 }

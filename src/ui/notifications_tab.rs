@@ -6,27 +6,47 @@ impl SettingsApp {
         ui.heading("Notifications");
         ui.add_space(8.0);
 
-        ui.checkbox(
-            &mut self.config.notifications.enabled,
-            "Enable Windows toast notifications",
-        );
+        if ui
+            .checkbox(
+                &mut self.config.notifications.enabled,
+                "Enable Windows toast notifications",
+            )
+            .changed()
+        {
+            self.dirty = true;
+        }
 
         ui.add_space(8.0);
         ui.add_enabled_ui(self.config.notifications.enabled, |ui| {
             ui.group(|ui| {
                 ui.label("Show notifications for:");
-                ui.checkbox(
-                    &mut self.config.notifications.on_update,
-                    "Available updates",
-                );
-                ui.checkbox(
-                    &mut self.config.notifications.on_hotkey_fail,
-                    "Hotkey registration failures",
-                );
-                ui.checkbox(
-                    &mut self.config.notifications.on_profile_switch,
-                    "Profile switches",
-                );
+                if ui
+                    .checkbox(
+                        &mut self.config.notifications.on_update,
+                        "Available updates",
+                    )
+                    .changed()
+                {
+                    self.dirty = true;
+                }
+                if ui
+                    .checkbox(
+                        &mut self.config.notifications.on_hotkey_fail,
+                        "Hotkey registration failures",
+                    )
+                    .changed()
+                {
+                    self.dirty = true;
+                }
+                if ui
+                    .checkbox(
+                        &mut self.config.notifications.on_profile_switch,
+                        "Profile switches",
+                    )
+                    .changed()
+                {
+                    self.dirty = true;
+                }
             });
         });
 

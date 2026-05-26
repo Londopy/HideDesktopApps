@@ -14,7 +14,9 @@ impl SettingsApp {
             ui.group(|ui| {
                 ui.horizontal(|ui| {
                     ui.label("Name:");
-                    ui.text_edit_singleline(&mut profile.name);
+                    if ui.text_edit_singleline(&mut profile.name).changed() {
+                        self.dirty = true;
+                    }
                     if ui
                         .add(egui::Button::new("Remove").fill(egui::Color32::DARK_RED))
                         .clicked()
@@ -25,14 +27,22 @@ impl SettingsApp {
 
                 ui.horizontal(|ui| {
                     ui.label("Hotkey:");
-                    ui.text_edit_singleline(&mut profile.hotkey);
+                    if ui.text_edit_singleline(&mut profile.hotkey).changed() {
+                        self.dirty = true;
+                    }
                     ui.label("(empty = none, e.g. ctrl+alt+1)");
                 });
 
                 ui.horizontal(|ui| {
-                    ui.checkbox(&mut profile.icons, "Hide Icons");
-                    ui.checkbox(&mut profile.taskbar, "Hide Taskbar");
-                    ui.checkbox(&mut profile.windows, "Hide Windows");
+                    if ui.checkbox(&mut profile.icons, "Hide Icons").changed() {
+                        self.dirty = true;
+                    }
+                    if ui.checkbox(&mut profile.taskbar, "Hide Taskbar").changed() {
+                        self.dirty = true;
+                    }
+                    if ui.checkbox(&mut profile.windows, "Hide Windows").changed() {
+                        self.dirty = true;
+                    }
                 });
             });
             ui.add_space(4.0);
@@ -40,10 +50,12 @@ impl SettingsApp {
 
         if let Some(idx) = to_delete {
             self.config.profiles.remove(idx);
+            self.dirty = true;
         }
 
         if ui.button("+ Add Profile").clicked() {
             self.config.profiles.push(ProfileConfig::default());
+            self.dirty = true;
         }
 
         ui.add_space(8.0);
@@ -58,14 +70,28 @@ impl SettingsApp {
             self.config.defaults.profile.clone()
         };
 
-        egui::ComboBox::from_label("Default profile")
+        let combo = egui::ComboBox::from_label("Default profile")
             .selected_text(&current)
             .show_ui(ui, |ui| {
+                let mut changed = false;
                 for name in &profile_names {
                     let is_none = name == "(none)";
                     let value = if is_none { "" } else { name.as_str() };
-                    ui.selectable_value(&mut self.config.defaults.profile, value.to_string(), name);
+                    if ui
+                        .selectable_value(
+                            &mut self.config.defaults.profile,
+                            value.to_string(),
+                            name,
+                        )
+                        .changed()
+                    {
+                        changed = true;
+                    }
                 }
+                changed
             });
+        if combo.inner == Some(true) {
+            self.dirty = true;
+        }
     }
 }

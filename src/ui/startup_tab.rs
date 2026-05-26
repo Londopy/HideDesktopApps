@@ -6,10 +6,15 @@ impl SettingsApp {
         ui.heading("Startup");
         ui.add_space(8.0);
 
-        ui.checkbox(
-            &mut self.config.startup.enabled,
-            "Start HideDesktopApps at Windows logon",
-        );
+        if ui
+            .checkbox(
+                &mut self.config.startup.enabled,
+                "Start HideDesktopApps at Windows logon",
+            )
+            .changed()
+        {
+            self.dirty = true;
+        }
         ui.label("Places a launcher in your Windows Startup folder.");
 
         ui.add_space(8.0);

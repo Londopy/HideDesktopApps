@@ -6,10 +6,15 @@ impl SettingsApp {
         ui.heading("Discord Rich Presence");
         ui.add_space(8.0);
 
-        ui.checkbox(
-            &mut self.config.discord.enabled,
-            "Show current hide state in Discord Rich Presence",
-        );
+        if ui
+            .checkbox(
+                &mut self.config.discord.enabled,
+                "Show current hide state in Discord Rich Presence",
+            )
+            .changed()
+        {
+            self.dirty = true;
+        }
 
         ui.add_space(8.0);
         ui.group(|ui| {

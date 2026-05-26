@@ -6,15 +6,21 @@ impl SettingsApp {
         ui.heading("Auto-Updater");
         ui.add_space(8.0);
 
-        ui.checkbox(
-            &mut self.config.updater.enabled,
-            "Enable automatic update checks",
-        );
+        if ui
+            .checkbox(
+                &mut self.config.updater.enabled,
+                "Enable automatic update checks",
+            )
+            .changed()
+        {
+            self.dirty = true;
+        }
 
         ui.add_space(8.0);
         ui.add_enabled_ui(self.config.updater.enabled, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Update channel:");
+                let before = self.config.updater.channel.clone();
                 egui::ComboBox::from_label("")
                     .selected_text(&self.config.updater.channel)
                     .show_ui(ui, |ui| {
@@ -29,14 +35,22 @@ impl SettingsApp {
                             "Beta (pre-releases)",
                         );
                     });
+                if self.config.updater.channel != before {
+                    self.dirty = true;
+                }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Check interval:");
-                ui.add(
-                    egui::Slider::new(&mut self.config.updater.check_interval_h, 1..=168)
-                        .suffix(" hours"),
-                );
+                if ui
+                    .add(
+                        egui::Slider::new(&mut self.config.updater.check_interval_h, 1..=168)
+                            .suffix(" hours"),
+                    )
+                    .changed()
+                {
+                    self.dirty = true;
+                }
             });
 
             if !self.config.updater.last_checked.is_empty() {
