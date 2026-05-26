@@ -192,7 +192,7 @@ Open *Run* (Win+R) and type:
 
 [source,powershell]
 ----
-powershell -Command "Add-Type -N System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize"
+powershell -command "Stop-Process -Name explorer -Force"
 ----
 
 Or just press Ctrl+Alt+T — the hotkey works even without the taskbar visible.
