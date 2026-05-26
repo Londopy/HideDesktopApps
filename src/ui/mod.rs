@@ -133,6 +133,15 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mp
     }
 
     std::thread::spawn(move || {
+        // Resets the flag when dropped — even if run_native panics.
+        struct OpenGuard;
+        impl Drop for OpenGuard {
+            fn drop(&mut self) {
+                SETTINGS_OPEN.store(false, Ordering::SeqCst);
+            }
+        }
+        let _guard = OpenGuard;
+
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
                 .with_title("HideDesktopApps Settings")
@@ -155,8 +164,6 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mp
             crate::dlog!("Settings window error: {}", e);
             eprintln!("Settings window error: {e}");
         }
-
-        // Allow the settings window to be opened again.
-        SETTINGS_OPEN.store(false, Ordering::SeqCst);
+        // _guard drops here, resetting SETTINGS_OPEN
     });
 }
