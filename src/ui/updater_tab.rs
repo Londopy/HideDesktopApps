@@ -67,19 +67,19 @@ impl SettingsApp {
                         let _ = tx.send(crate::Cmd::UpdateAvailable(v));
                     }
                     Ok(None) => {
-                        eprintln!("Up to date");
+                        let _ = tx.send(crate::Cmd::UpToDate);
                     }
                     Err(e) => {
                         eprintln!("Update check failed: {e}");
                     }
                 });
-                self.update_status = Some("Checking…".to_string());
+                self.update_status = Some("Checking...".to_string());
             }
 
             if ui.button("Download & Install Update").clicked() {
                 let channel = self.config.updater.channel.clone();
                 crate::updater::background_apply(channel);
-                self.update_status = Some("Downloading update…".to_string());
+                self.update_status = Some("Downloading update...".to_string());
             }
         });
 

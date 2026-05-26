@@ -10,7 +10,7 @@ impl SettingsApp {
             &mut self.config.startup.enabled,
             "Start HideDesktopApps at Windows logon",
         );
-        ui.label("Adds the app to the Windows registry Run key (HKCU).");
+        ui.label("Places a launcher in your Windows Startup folder.");
 
         ui.add_space(8.0);
         ui.separator();

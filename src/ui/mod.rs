@@ -118,14 +118,22 @@ impl eframe::App for SettingsApp {
             });
 
             ui.separator();
-            if let Some(ref err) = self.hotkey_error.clone() {
-                ui.colored_label(egui::Color32::RED, err);
-            }
-            ui.horizontal(|ui| {
-                if ui.button("Apply & Save").clicked() {
-                    self.apply();
+
+            // Hotkey validation error only applies on the Hotkeys tab
+            if self.current_tab == Tab::Hotkeys {
+                if let Some(ref err) = self.hotkey_error.clone() {
+                    ui.colored_label(egui::Color32::RED, err);
                 }
-                if ui.button("Cancel").clicked() {
+            }
+
+            ui.horizontal(|ui| {
+                // Apply & Save doesn't make sense on the About tab
+                if self.current_tab != Tab::About {
+                    if ui.button("Apply & Save").clicked() {
+                        self.apply();
+                    }
+                }
+                if ui.button("Close").clicked() {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             });
@@ -133,25 +141,30 @@ impl eframe::App for SettingsApp {
     }
 }
 
-/// Open the Settings window. Blocks until the window is closed.
-/// Must be called from the main thread (winit requirement on Windows).
+/// Open the Settings window on a background thread so the main loop keeps running.
 pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mpsc::Sender<Cmd>) {
-    let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("HideDesktopApps Settings")
-            .with_inner_size([600.0, 480.0])
-            .with_resizable(true),
-        ..Default::default()
-    };
+    std::thread::spawn(move || {
+        let native_options = eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default()
+                .with_title("HideDesktopApps Settings")
+                .with_inner_size([600.0, 480.0])
+                .with_resizable(true),
+            event_loop_builder: Some(Box::new(|builder| {
+                use winit::platform::windows::EventLoopBuilderExtWindows;
+                builder.with_any_thread(true);
+            })),
+            ..Default::default()
+        };
 
-    let result = eframe::run_native(
-        "HideDesktopApps Settings",
-        native_options,
-        Box::new(move |_cc| Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))),
-    );
+        let result = eframe::run_native(
+            "HideDesktopApps Settings",
+            native_options,
+            Box::new(move |_cc| Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))),
+        );
 
-    if let Err(e) = result {
-        crate::dlog!("Settings window error: {}", e);
-        eprintln!("Settings window error: {e}");
-    }
+        if let Err(e) = result {
+            crate::dlog!("Settings window error: {}", e);
+            eprintln!("Settings window error: {e}");
+        }
+    });
 }

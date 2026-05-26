@@ -1,36 +1,52 @@
 use anyhow::Result;
+use std::path::PathBuf;
 use winreg::enums::*;
 use winreg::RegKey;
 
-const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const APP_NAME: &str = "HideDesktopApps";
 
-/// Add the app to HKCU\...\Run so it starts at login.
+fn vbs_path() -> PathBuf {
+    let appdata = std::env::var("APPDATA").unwrap_or_default();
+    PathBuf::from(appdata)
+        .join("Microsoft")
+        .join("Windows")
+        .join("Start Menu")
+        .join("Programs")
+        .join("Startup")
+        .join("HideDesktopApps.vbs")
+}
+
+/// Write a VBS launcher to the Startup folder so the app runs silently at login.
 pub fn register(exe_path: &str, _delay_s: u32) -> Result<()> {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let (run_key, _) = hkcu.create_subkey(RUN_KEY)?;
-    run_key.set_value(APP_NAME, &exe_path.to_string())?;
+    let path = vbs_path();
+    // Double-quote the exe path inside the VBS string literal
+    let escaped = exe_path.replace('"', "\"\"");
+    let content = format!(
+        "CreateObject(\"WScript.Shell\").Run \"\"\"{}\"\"\", 0, False\n",
+        escaped
+    );
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, content)?;
     Ok(())
 }
 
-/// Remove the app from HKCU\...\Run.
+/// Remove the VBS launcher from the Startup folder.
 pub fn unregister() -> Result<()> {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run_key) = hkcu.open_subkey_with_flags(RUN_KEY, KEY_WRITE) {
-        run_key.delete_value(APP_NAME).ok();
+    let path = vbs_path();
+    if path.exists() {
+        std::fs::remove_file(&path)?;
     }
     Ok(())
 }
 
-/// Returns true if the app is registered in HKCU\...\Run.
+/// Returns true if the VBS launcher exists in the Startup folder.
 pub fn is_registered() -> bool {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    hkcu.open_subkey(RUN_KEY)
-        .and_then(|k| k.get_value::<String, _>(APP_NAME))
-        .is_ok()
+    vbs_path().exists()
 }
 
-/// Sync the startup entry to match the config: register if enabled, remove if disabled.
+/// Sync the startup entry to match the config.
 pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
     crate::dlog!("sync_startup: enabled={}, exe={}", config.enabled, exe_path);
     if config.enabled {
@@ -51,5 +67,23 @@ pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
         }
     } else {
         crate::dlog!("startup: disabled and not registered, nothing to do");
+    }
+}
+
+/// Register the AppUserModelId in the registry and set it for the current process.
+/// Windows requires this for toast notifications to work reliably.
+pub fn setup_aumid() {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok((key, _)) =
+        hkcu.create_subkey(r"SOFTWARE\Classes\AppUserModelId\HideDesktopApps")
+    {
+        let _ = key.set_value("DisplayName", &APP_NAME.to_string());
+    }
+    unsafe {
+        use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+        // encode_utf16 gives code units; append null terminator
+        let mut id: Vec<u16> = APP_NAME.encode_utf16().collect();
+        id.push(0);
+        let _ = SetCurrentProcessExplicitAppUserModelID(windows::core::PCWSTR(id.as_ptr()));
     }
 }

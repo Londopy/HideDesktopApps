@@ -17,13 +17,5 @@ impl SettingsApp {
             ui.label("  State: HideDesktopApps");
             ui.label("  Details: e.g. \"Icons hidden · Taskbar hidden\"");
         });
-
-        ui.add_space(8.0);
-        ui.label("Requires a Discord application to be registered at:");
-        ui.hyperlink("https://discord.com/developers/applications");
-        ui.label("Replace the placeholder App ID in src/discord.rs with your App ID.");
-
-        ui.add_space(8.0);
-        ui.label("Discord must be running for Rich Presence to work.");
     }
 }

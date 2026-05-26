@@ -31,7 +31,6 @@ pub enum Cmd {
     ApplyProfile(String),
     ConfigUpdated(AppConfig),
     OpenSettings,
-    CheckForUpdates,
     Restart,
     Exit,
     UpdateAvailable(String),
@@ -58,6 +57,9 @@ fn main() {
 }
 
 fn run() -> Result<()> {
+    // Register AppUserModelId so Windows toast notifications work.
+    startup::setup_aumid();
+
     dlog!("--- HideDesktopApps starting ---");
     let config = config::load_config()?;
     let config_shared = Arc::new(Mutex::new(config.clone()));
@@ -183,8 +185,6 @@ fn main_loop(
                 let _ = cmd_tx.send(Cmd::ToggleWindows);
             } else if id == &tray_handle.ids.settings {
                 let _ = cmd_tx.send(Cmd::OpenSettings);
-            } else if id == &tray_handle.ids.check_updates {
-                let _ = cmd_tx.send(Cmd::CheckForUpdates);
             } else if id == &tray_handle.ids.restart {
                 let _ = cmd_tx.send(Cmd::Restart);
             } else if id == &tray_handle.ids.exit {
@@ -333,18 +333,8 @@ fn main_loop(
 
                 Cmd::OpenSettings => {
                     dlog!("Cmd::OpenSettings received");
-                    // Blocks on the main thread until the window is closed.
-                    // eframe/winit requires the main thread on Windows.
+                    // Runs on a background thread; the main loop keeps going.
                     ui::open_settings(Arc::clone(&config_shared), cmd_tx.clone());
-                    dlog!("Settings window closed");
-                    // Drain tray events that may have fired while the window was open.
-                    while tray::poll_menu_event().is_some() {}
-                    while tray::poll_tray_event().is_some() {}
-                }
-
-                Cmd::CheckForUpdates => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    updater::background_check(cfg.updater, cmd_tx.clone(), true);
                 }
 
                 Cmd::Restart => {

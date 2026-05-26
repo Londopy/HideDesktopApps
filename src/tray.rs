@@ -12,7 +12,6 @@ pub struct TrayMenuIds {
     pub toggle_taskbar: tray_icon::menu::MenuId,
     pub toggle_windows: tray_icon::menu::MenuId,
     pub settings: tray_icon::menu::MenuId,
-    pub check_updates: tray_icon::menu::MenuId,
     pub restart: tray_icon::menu::MenuId,
     pub exit: tray_icon::menu::MenuId,
     // (menu-item id, profile name) pairs for the Profiles submenu
@@ -209,7 +208,6 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     let toggle_taskbar_item = MenuItem::new("Toggle Taskbar\tCtrl+Alt+T", true, None);
     let toggle_windows_item = MenuItem::new("Toggle App Windows\tCtrl+Alt+W", true, None);
     let settings_item = MenuItem::new("Settings...", true, None);
-    let check_updates_item = MenuItem::new("Check for Updates", true, None);
     let restart_item = MenuItem::new("Restart", true, None);
     let exit_item = MenuItem::new("Exit", true, None);
 
@@ -234,7 +232,6 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
         toggle_taskbar: toggle_taskbar_item.id().clone(),
         toggle_windows: toggle_windows_item.id().clone(),
         settings: settings_item.id().clone(),
-        check_updates: check_updates_item.id().clone(),
         restart: restart_item.id().clone(),
         exit: exit_item.id().clone(),
         profiles: profile_ids,
@@ -248,7 +245,6 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     menu.append(&profiles_submenu)?;
     menu.append(&PredefinedMenuItem::separator())?;
     menu.append(&settings_item)?;
-    menu.append(&check_updates_item)?;
     menu.append(&PredefinedMenuItem::separator())?;
     menu.append(&restart_item)?;
     menu.append(&exit_item)?;
