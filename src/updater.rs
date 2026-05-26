@@ -192,22 +192,26 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
 }
 
 /// Run a background update check and send the result to the main loop.
+/// Set `user_triggered` to true when the user clicked "Check for Updates" — this
+/// causes a "you're up to date" notification when no update is found.
 pub fn background_check(
     config: crate::config::UpdaterConfig,
     cmd_tx: std::sync::mpsc::Sender<crate::Cmd>,
+    user_triggered: bool,
 ) {
     std::thread::spawn(move || {
-        if !config.enabled {
+        if !config.enabled && !user_triggered {
             return;
         }
 
         match check_for_update(&config.channel) {
             Ok(Some(version)) => {
-                eprintln!("Update available: {version}");
                 let _ = cmd_tx.send(crate::Cmd::UpdateAvailable(version));
             }
             Ok(None) => {
-                eprintln!("No update available");
+                if user_triggered {
+                    let _ = cmd_tx.send(crate::Cmd::UpToDate);
+                }
             }
             Err(e) => {
                 eprintln!("Update check failed: {e}");
@@ -216,11 +220,4 @@ pub fn background_check(
     });
 }
 
-/// Run a background update download+apply (triggered by user from Settings).
-pub fn background_apply(channel: String) {
-    std::thread::spawn(move || {
-        if let Err(e) = download_and_apply(&channel) {
-            eprintln!("Update failed: {e}");
-        }
-    });
-}
+/// Run a background update download+apply (triggered by user fro

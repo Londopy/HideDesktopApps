@@ -32,13 +32,13 @@ pub fn is_registered() -> bool {
 
 /// Sync the startup entry to match the config: register if enabled, remove if disabled.
 pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
+    crate::dlog!(
+        "sync_startup: enabled={}, exe={}",
+        config.enabled,
+        exe_path
+    );
     if config.enabled {
-        if let Err(e) = register(exe_path, config.delay_s) {
-            eprintln!("Failed to register startup: {e}");
-        }
-    } else if is_registered() {
-        if let Err(e) = unregister() {
-            eprintln!("Failed to unregister startup: {e}");
-        }
-    }
-}
+        match register(exe_path, config.delay_s) {
+            Ok(()) => crate::dlog!("startup: registered OK"),
+            Err(e) => {
+                crate::dlog!("s

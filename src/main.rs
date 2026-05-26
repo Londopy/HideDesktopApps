@@ -35,6 +35,7 @@ pub enum Cmd {
     Restart,
     Exit,
     UpdateAvailable(String),
+    UpToDate,
     HotkeyFailed(String),
 }
 
@@ -206,15 +207,16 @@ fn main_loop(
             }
         }
 
-        // ── Poll tray icon events (double-click toggles icons) ───────────
+        // ── Poll tray icon events (left click toggles icons) ────────────
         while let Some(event) = tray::poll_tray_event() {
-            use tray_icon::{MouseButton, TrayIconEvent};
-            if let TrayIconEvent::DoubleClick {
+            use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
+            if let TrayIconEvent::Click {
                 button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
                 ..
             } = event
             {
-                dlog!("tray double-click: ToggleIcons");
+                dlog!("tray left-click: ToggleIcons");
                 let _ = cmd_tx.send(Cmd::ToggleIcons);
             }
         }
@@ -225,7 +227,7 @@ fn main_loop(
             let interval = Duration::from_secs(cfg.updater.check_interval_h as u64 * 3600);
             if cfg.updater.enabled && last_update_check.elapsed() >= interval {
                 *last_update_check = Instant::now();
-                updater::background_check(cfg.updater.clone(), cmd_tx.clone());
+                updater::background_check(cfg.updater.clone(), cmd_tx.clone(), false);
             }
         }
 
@@ -338,12 +340,18 @@ fn main_loop(
 
                 Cmd::OpenSettings => {
                     dlog!("Cmd::OpenSettings received");
+                    // Blocks on the main thread until the window is closed.
+                    // eframe/winit requires the main thread on Windows.
                     ui::open_settings(Arc::clone(&config_shared), cmd_tx.clone());
+                    dlog!("Settings window closed");
+                    // Drain tray events that may have fired while the window was open.
+                    while tray::poll_menu_event().is_some() {}
+                    while tray::poll_tray_event().is_some() {}
                 }
 
                 Cmd::CheckForUpdates => {
                     let cfg = config_shared.lock().unwrap().clone();
-                    updater::background_check(cfg.updater, cmd_tx.clone());
+                    updater::background_check(cfg.updater, cmd_tx.clone(), true);
                 }
 
                 Cmd::Restart => {
@@ -371,23 +379,5 @@ fn main_loop(
                     eprintln!("Update available: {version}");
                 }
 
-                Cmd::HotkeyFailed(hotkey) => {
-                    let cfg = config_shared.lock().unwrap().clone();
-                    notifications::notify_hotkey_failed(&hotkey, &cfg.notifications);
-                }
-            }
-        }
-    }
-}
-
-/// Update Discord Rich Presence if enabled.
-fn update_discord(state: &AppState, config: &AppConfig) {
-    if config.discord.enabled {
-        discord::set_rich_presence(
-            state.icons_hidden,
-            state.taskbar_hidden,
-            state.windows_hidden,
-            state.active_profile.clone(),
-        );
-    }
-}
+                Cmd::UpToDate => {
+                    let cfg = config_shared
