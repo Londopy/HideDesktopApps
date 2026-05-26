@@ -5,8 +5,7 @@ use std::io::Write;
 
 const GITHUB_API_LATEST: &str =
     "https://api.github.com/repos/Londopy/HideDesktopApps/releases/latest";
-const GITHUB_API_RELEASES: &str =
-    "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
+const GITHUB_API_RELEASES: &str = "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
 
 /// Detect the current build architecture suffix used in release asset names.
 fn arch_suffix() -> &'static str {
