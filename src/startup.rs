@@ -4,8 +4,10 @@ use winreg::enums::*;
 use winreg::RegKey;
 
 const APP_NAME: &str = "HideDesktopApps";
+const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 
-fn vbs_path() -> PathBuf {
+/// Old VBS launcher path — used only to clean up on migration.
+fn legacy_vbs_path() -> PathBuf {
     let appdata = std::env::var("APPDATA").unwrap_or_default();
     PathBuf::from(appdata)
         .join("Microsoft")
@@ -16,34 +18,46 @@ fn vbs_path() -> PathBuf {
         .join("HideDesktopApps.vbs")
 }
 
-/// Write a VBS launcher to the Startup folder so the app runs silently at login.
-pub fn register(exe_path: &str, _delay_s: u32) -> Result<()> {
-    let path = vbs_path();
-    // Double-quote the exe path inside the VBS string literal
-    let escaped = exe_path.replace('"', "\"\"");
-    let content = format!(
-        "CreateObject(\"WScript.Shell\").Run \"\"\"{}\"\"\", 0, False\n",
-        escaped
-    );
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&path, content)?;
-    Ok(())
-}
-
-/// Remove the VBS launcher from the Startup folder.
-pub fn unregister() -> Result<()> {
-    let path = vbs_path();
+/// Remove the old VBS launcher if it exists (left over from a previous install).
+fn remove_legacy_vbs() {
+    let path = legacy_vbs_path();
     if path.exists() {
-        std::fs::remove_file(&path)?;
+        let _ = std::fs::remove_file(&path);
     }
+}
+
+/// Write a registry Run entry so the app launches at login.
+/// The exe path is quoted to handle spaces in the path.
+pub fn register(exe_path: &str, _delay_s: u32) -> Result<()> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let key = hkcu.open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE)?;
+    // Quote the path so spaces are handled correctly.
+    let value = format!("\"{}\"", exe_path);
+    key.set_value(APP_NAME, &value)?;
+    // Clean up the old VBS launcher if it's still around.
+    remove_legacy_vbs();
     Ok(())
 }
 
-/// Returns true if the VBS launcher exists in the Startup folder.
+/// Remove the registry Run entry.
+pub fn unregister() -> Result<()> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let key = hkcu.open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE)?;
+    // delete_value returns an error if the value doesn't exist; that's fine.
+    let _ = key.delete_value(APP_NAME);
+    remove_legacy_vbs();
+    Ok(())
+}
+
+/// Returns true if the registry Run entry exists.
 pub fn is_registered() -> bool {
-    vbs_path().exists()
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(key) = hkcu.open_subkey(RUN_KEY) {
+        let val: Result<String, _> = key.get_value(APP_NAME);
+        val.is_ok()
+    } else {
+        false
+    }
 }
 
 /// Sync the startup entry to match the config.
@@ -79,7 +93,6 @@ pub fn setup_aumid() {
     }
     unsafe {
         use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
-        // encode_utf16 gives code units; append null terminator
         let mut id: Vec<u16> = APP_NAME.encode_utf16().collect();
         id.push(0);
         let _ = SetCurrentProcessExplicitAppUserModelID(windows::core::PCWSTR(id.as_ptr()));
