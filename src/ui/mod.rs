@@ -128,10 +128,8 @@ impl eframe::App for SettingsApp {
 
             ui.horizontal(|ui| {
                 // Apply & Save doesn't make sense on the About tab
-                if self.current_tab != Tab::About {
-                    if ui.button("Apply & Save").clicked() {
-                        self.apply();
-                    }
+                if self.current_tab != Tab::About && ui.button("Apply & Save").clicked() {
+                    self.apply();
                 }
                 if ui.button("Close").clicked() {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
