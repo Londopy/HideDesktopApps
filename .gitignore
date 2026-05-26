@@ -1,10 +1,10 @@
+# Rust build output
+target/
+
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
-
-# Generated files
-HideDesktopApps.vbs
 
 # OS / editor noise
 .DS_Store
