@@ -26,7 +26,7 @@ pub struct TrayHandle {
 
 const ICON_SIZE: usize = 64;
 
-// ─── pixel helpers ───────────────────────────────────────────────────────────
+// pixel helpers
 
 fn set_pixel(buf: &mut [u8], x: usize, y: usize, color: [u8; 4]) {
     if x >= ICON_SIZE || y >= ICON_SIZE {
@@ -87,7 +87,7 @@ fn fill_circle(buf: &mut [u8], cx: isize, cy: isize, r: isize, color: [u8; 4]) {
     }
 }
 
-// ─── colors ──────────────────────────────────────────────────────────────────
+// colors
 
 const BLUE: [u8; 4] = [52, 152, 219, 255];
 const GREEN: [u8; 4] = [46, 204, 113, 255];
@@ -208,7 +208,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     let toggle_icons_item = MenuItem::new("Toggle Desktop Icons\tCtrl+Alt+H", true, None);
     let toggle_taskbar_item = MenuItem::new("Toggle Taskbar\tCtrl+Alt+T", true, None);
     let toggle_windows_item = MenuItem::new("Toggle App Windows\tCtrl+Alt+W", true, None);
-    let settings_item = MenuItem::new("Settings…", true, None);
+    let settings_item = MenuItem::new("Settings...", true, None);
     let check_updates_item = MenuItem::new("Check for Updates", true, None);
     let restart_item = MenuItem::new("Restart", true, None);
     let exit_item = MenuItem::new("Exit", true, None);
@@ -218,7 +218,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     let mut profile_ids: Vec<(tray_icon::menu::MenuId, String)> = Vec::new();
 
     if profiles.is_empty() {
-        // Placeholder so the submenu isn't empty
+        // Placeholder so the submenu is not empty
         let none_item = MenuItem::new("(no profiles)", false, None);
         profiles_submenu.append(&none_item)?;
     } else {
@@ -282,4 +282,5 @@ pub fn poll_menu_event() -> Option<MenuEvent> {
 
 /// Poll tray icon events (click, double-click) without blocking.
 pub fn poll_tray_event() -> Option<TrayIconEvent> {
-    Tray
+    TrayIconEvent::receiver().try_recv().ok()
+}
