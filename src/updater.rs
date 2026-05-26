@@ -5,7 +5,8 @@ use std::io::Write;
 
 const GITHUB_API_LATEST: &str =
     "https://api.github.com/repos/Londopy/HideDesktopApps/releases/latest";
-const GITHUB_API_RELEASES: &str = "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
+const GITHUB_API_RELEASES: &str =
+    "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
 
 /// Detect the current build architecture suffix used in release asset names.
 fn arch_suffix() -> &'static str {
@@ -117,7 +118,6 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
     let zip_path = temp_dir.join("HideDesktopApps-update.zip");
     let new_exe_path = temp_dir.join("HideDesktopApps-new.exe");
 
-    eprintln!("Downloading update: {}", zip_asset.browser_download_url);
     let zip_bytes = client
         .get(&zip_asset.browser_download_url)
         .send()
@@ -150,9 +150,6 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
                 actual_hex
             );
         }
-        eprintln!("SHA-256 verified OK");
-    } else {
-        eprintln!("No .sha256 asset found; skipping verification");
     }
 
     // Write zip to disk
@@ -180,7 +177,6 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
     }
 
     // Self-replace and restart
-    eprintln!("Replacing current exe with new version...");
     self_replace::self_replace(&new_exe_path).context("self_replace failed")?;
 
     let current_exe = std::env::current_exe().context("Getting current exe path")?;
@@ -192,8 +188,8 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
 }
 
 /// Run a background update check and send the result to the main loop.
-/// Set `user_triggered` to true when the user clicked "Check for Updates" — this
-/// causes a "you're up to date" notification when no update is found.
+/// Set `user_triggered` to true when the user clicked "Check for Updates" so
+/// a "you are up to date" notification is shown when no update is found.
 pub fn background_check(
     config: crate::config::UpdaterConfig,
     cmd_tx: std::sync::mpsc::Sender<crate::Cmd>,
@@ -220,4 +216,11 @@ pub fn background_check(
     });
 }
 
-/// Run a background update download+apply (triggered by user fro
+/// Run a background update download+apply (triggered by user from Settings).
+pub fn background_apply(channel: String) {
+    std::thread::spawn(move || {
+        if let Err(e) = download_and_apply(&channel) {
+            eprintln!("Update failed: {e}");
+        }
+    });
+}
