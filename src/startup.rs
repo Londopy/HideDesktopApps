@@ -74,9 +74,7 @@ pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
 /// Windows requires this for toast notifications to work reliably.
 pub fn setup_aumid() {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok((key, _)) =
-        hkcu.create_subkey(r"SOFTWARE\Classes\AppUserModelId\HideDesktopApps")
-    {
+    if let Ok((key, _)) = hkcu.create_subkey(r"SOFTWARE\Classes\AppUserModelId\HideDesktopApps") {
         let _ = key.set_value("DisplayName", &APP_NAME.to_string());
     }
     unsafe {

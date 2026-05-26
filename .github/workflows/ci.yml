@@ -13,7 +13,7 @@ env:
 jobs:
   check:
     name: Lint and Test
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
