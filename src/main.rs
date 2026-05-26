@@ -44,15 +44,12 @@ fn main() {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         eprintln!("PANIC: {info}");
-        // Attempt best-effort restore; we cannot access state here so we call
-        // the Win32 functions directly.
         let _ = icons::show_icons();
         let _ = taskbar::show_taskbar();
         default_hook(info);
     }));
 
     if let Err(e) = run() {
-        // Restore everything before exiting on a fatal error.
         let _ = icons::show_icons();
         let _ = taskbar::show_taskbar();
         eprintln!("Fatal error: {e:?}");
@@ -78,7 +75,7 @@ fn run() -> Result<()> {
             drop(state);
             let _ = tx_for_ctrlc.send(Cmd::Exit);
         })
-        .ok(); // non-fatal if it fails
+        .ok();
     }
 
     // Register hotkeys
@@ -103,9 +100,6 @@ fn run() -> Result<()> {
     }
 
     // Schedule first update check.
-    // Use checked_sub so we don't panic on systems with uptime shorter than the interval.
-    // If the subtraction underflows we fall back to now(), meaning the first check happens
-    // after one full interval rather than immediately — that's fine.
     let interval = Duration::from_secs(config.updater.check_interval_h as u64 * 3600);
     let mut last_update_check = Instant::now()
         .checked_sub(interval)
@@ -137,8 +131,7 @@ fn main_loop(
 
     loop {
         // Pump Win32 messages — tray_icon and global_hotkey both rely on a
-        // message loop on Windows. Without this the tray icon never appears
-        // and hotkeys never fire.
+        // message loop on Windows.
         #[cfg(target_os = "windows")]
         unsafe {
             use windows::Win32::UI::WindowsAndMessaging::{
@@ -207,7 +200,7 @@ fn main_loop(
             }
         }
 
-        // ── Poll tray icon events (left click toggles icons) ────────────
+        // ── Poll tray icon events (left click toggles icons) ─────────────
         while let Some(event) = tray::poll_tray_event() {
             use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
             if let TrayIconEvent::Click {
@@ -355,7 +348,6 @@ fn main_loop(
                 }
 
                 Cmd::Restart => {
-                    // Restore all before restarting
                     {
                         let mut state = state_shared.lock().unwrap();
                         profiles::restore_all(&mut state);
@@ -367,7 +359,6 @@ fn main_loop(
                 }
 
                 Cmd::Exit => {
-                    // Restore everything cleanly before exiting
                     let mut state = state_shared.lock().unwrap();
                     profiles::restore_all(&mut state);
                     return Ok(());
@@ -380,4 +371,27 @@ fn main_loop(
                 }
 
                 Cmd::UpToDate => {
-                    let cfg = config_shared
+                    let cfg = config_shared.lock().unwrap().clone();
+                    notifications::notify_up_to_date(&cfg.notifications);
+                }
+
+                Cmd::HotkeyFailed(hotkey) => {
+                    let cfg = config_shared.lock().unwrap().clone();
+                    notifications::notify_hotkey_failed(&hotkey, &cfg.notifications);
+                }
+            }
+        }
+    }
+}
+
+/// Update Discord Rich Presence if enabled.
+fn update_discord(state: &AppState, config: &AppConfig) {
+    if config.discord.enabled {
+        discord::set_rich_presence(
+            state.icons_hidden,
+            state.taskbar_hidden,
+            state.windows_hidden,
+            state.active_profile.clone(),
+        );
+    }
+}
