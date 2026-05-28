@@ -16,18 +16,27 @@ impl SettingsApp {
             self.dirty = true;
         }
 
+        // Big clear status banner so the user always knows the actual state.
+        let (banner_text, banner_color) = if self.config.startup.enabled {
+            ("Startup: ENABLED", egui::Color32::from_rgb(80, 200, 100))
+        } else {
+            ("Startup: DISABLED", egui::Color32::from_rgb(160, 160, 160))
+        };
+        ui.colored_label(banner_color, banner_text);
+
         ui.add_space(8.0);
         ui.separator();
 
-        // Query the registry directly so the status is always accurate.
+        // Query the task scheduler directly so the status is always accurate.
         let registered = crate::startup::is_registered();
         self.startup_registered = registered;
 
-        ui.label(if registered {
-            "Status: Registered in startup."
+        let (task_text, task_color) = if registered {
+            ("Task registered: Yes", egui::Color32::from_rgb(80, 200, 100))
         } else {
-            "Status: Not registered in startup."
-        });
+            ("Task registered: No", egui::Color32::from_rgb(220, 100, 80))
+        };
+        ui.colored_label(task_color, task_text);
 
         ui.add_space(4.0);
         ui.horizontal(|ui| {

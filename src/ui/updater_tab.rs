@@ -118,12 +118,26 @@ impl SettingsApp {
                 self.update_status = Some("Checking...".to_string());
             }
 
-            if ui.button("Download & Install Update").clicked() {
+            let update_ready = self
+                .update_status
+                .as_deref()
+                .map_or(false, |s| s.starts_with("Update available"));
+
+            if update_ready && ui.button("Download & Install Update").clicked() {
                 let channel = self.config.updater.channel.clone();
                 crate::updater::background_apply(channel);
                 self.update_status = Some("Downloading update...".to_string());
             }
         });
+
+        if self.config.updater.enabled {
+            ui.add_space(2.0);
+            ui.weak(format!(
+                "Auto-checks every {} hour{}.",
+                self.config.updater.check_interval_h,
+                if self.config.updater.check_interval_h == 1 { "" } else { "s" }
+            ));
+        }
 
         ui.add_space(8.0);
         ui.label("Updates are verified with SHA-256 before applying.");

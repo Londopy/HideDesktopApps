@@ -23,7 +23,7 @@ pub struct TrayHandle {
     pub ids: TrayMenuIds,
 }
 
-const ICON_SIZE: usize = 64;
+pub const ICON_SIZE: usize = 64;
 
 // pixel helpers
 

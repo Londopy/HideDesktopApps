@@ -168,11 +168,18 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<
         }
         let _guard = Guard;
 
+        let icon = {
+            let rgba = crate::tray::build_icon_rgba(&crate::state::AppState::default());
+            let size = crate::tray::ICON_SIZE as u32;
+            std::sync::Arc::new(egui::IconData { rgba, width: size, height: size })
+        };
+
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
                 .with_title("HideDesktopApps Settings")
                 .with_inner_size([600.0, 480.0])
-                .with_resizable(true),
+                .with_resizable(true)
+                .with_icon(icon),
             event_loop_builder: Some(Box::new(|builder| {
                 use winit::platform::windows::EventLoopBuilderExtWindows;
                 builder.with_any_thread(true);
