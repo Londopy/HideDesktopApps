@@ -7,7 +7,7 @@ const GITHUB_API_LATEST: &str =
     "https://api.github.com/repos/Londopy/HideDesktopApps/releases/latest";
 const GITHUB_API_RELEASES: &str = "https://api.github.com/repos/Londopy/HideDesktopApps/releases";
 
-/// Detect the current build architecture suffix used in release asset names.
+// figure out which arch we're on so we download the right zip
 fn arch_suffix() -> &'static str {
     #[cfg(target_arch = "x86_64")]
     {
@@ -46,12 +46,12 @@ fn build_client() -> Result<reqwest::blocking::Client> {
         .context("Building HTTP client")
 }
 
-/// Fetch the latest release from GitHub. For beta channel, scans all releases.
+// get the latest release info from github
 fn fetch_latest_release(channel: &str) -> Result<GithubRelease> {
     let client = build_client()?;
 
     if channel == "beta" {
-        // Scan all releases (includes pre-releases) and pick the newest
+        // beta: scan all releases including pre-releases, pick the newest
         let releases: Vec<GithubRelease> = client
             .get(GITHUB_API_RELEASES)
             .send()
@@ -68,7 +68,7 @@ fn fetch_latest_release(channel: &str) -> Result<GithubRelease> {
             })
             .ok_or_else(|| anyhow::anyhow!("No releases found"))
     } else {
-        // Stable channel: latest non-prerelease
+        // stable: just use the latest non-prerelease
         client
             .get(GITHUB_API_LATEST)
             .send()
@@ -78,7 +78,7 @@ fn fetch_latest_release(channel: &str) -> Result<GithubRelease> {
     }
 }
 
-/// Check whether a newer version is available. Returns Some(version_string) if so.
+// check if there's a newer version available
 pub fn check_for_update(channel: &str) -> Result<Option<String>> {
     let release = fetch_latest_release(channel)?;
     let remote_str = release.tag_name.trim_start_matches('v');
@@ -93,26 +93,26 @@ pub fn check_for_update(channel: &str) -> Result<Option<String>> {
     }
 }
 
-/// Download and apply an update, then restart.
+// download the update zip and replace the running exe
 pub fn download_and_apply(channel: &str) -> Result<()> {
     let release = fetch_latest_release(channel)?;
     let suffix = arch_suffix();
     let client = build_client()?;
 
-    // Find the portable zip asset
+    // find the zip for our arch
     let zip_asset = release
         .assets
         .iter()
         .find(|a| a.name.contains(suffix) && a.name.ends_with(".zip"))
         .ok_or_else(|| anyhow::anyhow!("No zip asset found for arch '{}'", suffix))?;
 
-    // Find the matching .sha256 asset
+    // find the matching sha256 file if there is one
     let sha_asset = release
         .assets
         .iter()
         .find(|a| a.name == format!("{}.sha256", zip_asset.name));
 
-    // Download zip to temp
+    // download to the temp folder
     let temp_dir = std::env::temp_dir();
     let zip_path = temp_dir.join("HideDesktopApps-update.zip");
     let new_exe_path = temp_dir.join("HideDesktopApps-new.exe");
@@ -124,7 +124,7 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
         .bytes()
         .context("Reading update zip bytes")?;
 
-    // Verify SHA-256 if available
+    // verify the download against the hash if we have one
     if let Some(sha_asset) = sha_asset {
         let expected_hex = client
             .get(&sha_asset.browser_download_url)
@@ -151,12 +151,12 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
         }
     }
 
-    // Write zip to disk
+    // save the zip to disk
     let mut f = std::fs::File::create(&zip_path).context("Creating temp zip")?;
     f.write_all(&zip_bytes).context("Writing temp zip")?;
     drop(f);
 
-    // Extract the exe from the zip
+    // pull the exe out of the zip
     let zip_file = std::fs::File::open(&zip_path).context("Opening zip")?;
     let mut archive = zip::ZipArchive::new(zip_file).context("Parsing zip")?;
 
@@ -175,7 +175,7 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
         bail!("No .exe found inside update zip");
     }
 
-    // Self-replace and restart
+    // replace the running exe and restart
     self_replace::self_replace(&new_exe_path).context("self_replace failed")?;
 
     let current_exe = std::env::current_exe().context("Getting current exe path")?;
@@ -186,9 +186,8 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
     std::process::exit(0);
 }
 
-/// Run a background update check and send the result to the main loop.
-/// Set `user_triggered` to true when the user clicked "Check for Updates" so
-/// a "you are up to date" notification is shown when no update is found.
+// background update check, sends result to main loop
+// user_triggered=true means show a "you're up to date" notification too
 pub fn background_check(
     config: crate::config::UpdaterConfig,
     cmd_tx: std::sync::mpsc::Sender<crate::Cmd>,
@@ -215,7 +214,7 @@ pub fn background_check(
     });
 }
 
-/// Run a background update download+apply (triggered by user from Settings).
+// start the download + apply in a background thread
 pub fn background_apply(channel: String) {
     std::thread::spawn(move || {
         if let Err(e) = download_and_apply(&channel) {

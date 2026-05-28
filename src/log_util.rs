@@ -1,8 +1,8 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 
-/// Write a line to %APPDATA%\HideDesktopApps\debug.log.
-/// Does nothing if the path can't be opened — never panics.
+// writes a timestamped line to the debug log in appdata
+// if the file can't be opened, just do nothing
 pub fn write(msg: &str) {
     let log_path = match std::env::var("APPDATA") {
         Ok(appdata) => std::path::PathBuf::from(appdata)
@@ -11,7 +11,7 @@ pub fn write(msg: &str) {
         Err(_) => return,
     };
 
-    // Make sure the directory exists before trying to open the file.
+    // make sure the folder exists first
     if let Some(parent) = log_path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -22,7 +22,7 @@ pub fn write(msg: &str) {
     }
 }
 
-/// Convenience macro so call sites look like eprintln!.
+// macro so logging looks like eprintln
 #[macro_export]
 macro_rules! dlog {
     ($($arg:tt)*) => {

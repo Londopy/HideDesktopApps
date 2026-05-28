@@ -21,29 +21,25 @@ struct EnumData {
     excluded_processes: Vec<String>,
 }
 
-// SAFETY: We only use HWND values as isize for storage; actual window operations
-// happen on the same thread that called EnumWindows.
+// HWNDs are stored as isize because HWND isn't Send
 unsafe impl Send for EnumData {}
 
-/// Returns the class name of a window.
+// get the window class name
 pub fn get_class_name(hwnd: HWND) -> String {
     let mut buf = [0u16; 256];
-    // SAFETY: FFI call with a properly sized buffer
     unsafe { GetClassNameW(hwnd, &mut buf) };
     let end = buf.iter().position(|&c| c == 0).unwrap_or(256);
     String::from_utf16_lossy(&buf[..end])
 }
 
-/// Returns the process name (exe filename) for a window's owning process.
+// get the exe filename for the process that owns this window
 fn get_process_name(hwnd: HWND) -> String {
-    // SAFETY: FFI call to get process ID for a window
     let mut pid: u32 = 0;
     unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
     if pid == 0 {
         return String::new();
     }
 
-    // SAFETY: Opening a process handle with limited rights to query its name
     unsafe {
         let handle = windows::Win32::System::Threading::OpenProcess(
             windows::Win32::System::Threading::PROCESS_QUERY_LIMITED_INFORMATION,
@@ -78,9 +74,9 @@ fn get_process_name(hwnd: HWND) -> String {
     }
 }
 
-/// EnumWindows callback that collects visible, non-shell application windows.
+// EnumWindows callback — collects the windows we want to hide
 unsafe extern "system" fn enum_windows_cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
-    // SAFETY: lparam is a valid pointer to EnumData that we passed in
+    // lparam is our EnumData struct
     let data = &mut *(lparam.0 as *mut EnumData);
 
     // Skip invisible windows
@@ -129,7 +125,7 @@ unsafe extern "system" fn enum_windows_cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
         }
     }
 
-    // Get the current show command so we can restore it correctly
+    // save the window state so we can restore it properly (normal/min/max)
     let mut placement = WINDOWPLACEMENT {
         length: std::mem::size_of::<WINDOWPLACEMENT>() as u32,
         ..Default::default()
@@ -141,9 +137,8 @@ unsafe extern "system" fn enum_windows_cb(hwnd: HWND, lparam: LPARAM) -> BOOL {
     TRUE
 }
 
-/// Enumerate all application windows suitable for hiding.
+// get all windows that are candidates for hiding
 pub fn enumerate_app_windows(excluded_processes: &[String]) -> Vec<(HWND, u32)> {
-    // SAFETY: my_pid is obtained from the OS and is always valid
     let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
 
     let mut data = EnumData {
@@ -152,8 +147,6 @@ pub fn enumerate_app_windows(excluded_processes: &[String]) -> Vec<(HWND, u32)> 
         excluded_processes: excluded_processes.to_vec(),
     };
 
-    // SAFETY: EnumWindows is called with a valid callback and data pointer;
-    // callback only reads/writes the EnumData struct via the lparam pointer.
     unsafe {
         let _ = EnumWindows(
             Some(enum_windows_cb),
@@ -164,13 +157,12 @@ pub fn enumerate_app_windows(excluded_processes: &[String]) -> Vec<(HWND, u32)> 
     data.hwnds
 }
 
-/// Hide a set of windows and return their HiddenWindow records.
+// hide all app windows and return a list so we can restore them later
 pub fn hide_windows(excluded_processes: &[String]) -> Result<Vec<HiddenWindow>> {
     let windows = enumerate_app_windows(excluded_processes);
     let mut hidden = Vec::new();
 
     for (hwnd, show_cmd) in windows {
-        // SAFETY: hwnd is a valid window handle obtained from EnumWindows
         unsafe {
             let _ = ShowWindow(hwnd, SW_HIDE);
         };
@@ -183,12 +175,10 @@ pub fn hide_windows(excluded_processes: &[String]) -> Result<Vec<HiddenWindow>> 
     Ok(hidden)
 }
 
-/// Restore previously hidden windows to their original show state.
+// restore all the windows we hid back to their original state
 pub fn restore_windows(hidden: &[HiddenWindow]) -> Result<()> {
     for hw in hidden {
-        // SAFETY: We reconstruct HWND from isize; this is safe as long as we
-        // call restore while the handles are still valid (which they should be
-        // since we only hide, not destroy them).
+        // reconstruct the hwnd from the saved isize
         let hwnd = HWND(hw.hwnd as *mut core::ffi::c_void);
 
         let cmd = match hw.show_cmd {
@@ -204,10 +194,9 @@ pub fn restore_windows(hidden: &[HiddenWindow]) -> Result<()> {
     Ok(())
 }
 
-/// Get the path to the current executable.
+// get the path to the running exe
 pub fn current_exe_path() -> String {
     let mut buf = vec![0u16; 260];
-    // SAFETY: FFI call with a properly sized buffer; None means current module
     unsafe { windows::Win32::System::LibraryLoader::GetModuleFileNameW(None, &mut buf) };
     let end = buf.iter().position(|&c| c == 0).unwrap_or(260);
     String::from_utf16_lossy(&buf[..end])

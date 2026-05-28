@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager};
 
-/// Parse a hotkey string like "ctrl+alt+h" into a HotKey.
+// turns "ctrl+alt+h" into a HotKey
 pub fn parse_hotkey(s: &str) -> Result<HotKey> {
     let parts: Vec<&str> = s.split('+').collect();
     if parts.len() < 2 {
@@ -31,7 +31,7 @@ pub fn parse_hotkey(s: &str) -> Result<HotKey> {
     Ok(HotKey::new(Some(modifiers), code))
 }
 
-/// Map a single key name to a global-hotkey Code.
+// maps a key name like "h" to a Code
 fn parse_key_code(key: &str) -> Result<Code> {
     let code = match key {
         "a" => Code::KeyA,
@@ -87,7 +87,7 @@ fn parse_key_code(key: &str) -> Result<Code> {
     Ok(code)
 }
 
-/// Registered hotkeys with their IDs and the original HotKey objects (needed for unregister).
+// stores the registered hotkeys so we can unregister them later
 pub struct RegisteredHotkeys {
     pub manager: GlobalHotKeyManager,
     pub icons_id: u32,
@@ -98,7 +98,7 @@ pub struct RegisteredHotkeys {
     windows_hk: HotKey,
 }
 
-/// Parse a hotkey string, falling back to a default and notifying on failure.
+// parse a hotkey string, fall back to the default if it fails
 fn parse_or_default(
     s: &str,
     fallback: &str,
@@ -114,7 +114,7 @@ fn parse_or_default(
     }
 }
 
-/// Register all three hotkeys from config.
+// register all three hotkeys from config
 pub fn register_hotkeys(
     hotkeys_config: &crate::config::HotkeysConfig,
     cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
@@ -153,18 +153,17 @@ pub fn register_hotkeys(
     })
 }
 
-/// Unregister old hotkeys and register new ones after a config change.
+// swap out hotkeys when the config changes
 pub fn reregister_hotkeys(
     registered: &mut RegisteredHotkeys,
     hotkeys_config: &crate::config::HotkeysConfig,
     cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
 ) {
-    // Unregister existing hotkeys (ignore errors — they may already be gone).
+    // unregister old ones (ignore errors, they might already be gone)
     let _ = registered.manager.unregister(registered.icons_hk);
     let _ = registered.manager.unregister(registered.taskbar_hk);
     let _ = registered.manager.unregister(registered.windows_hk);
 
-    // Parse new hotkeys.
     let icons_hk = parse_or_default(&hotkeys_config.icons, "ctrl+alt+h", cmd_tx);
     let taskbar_hk = parse_or_default(&hotkeys_config.taskbar, "ctrl+alt+t", cmd_tx);
     let windows_hk = parse_or_default(&hotkeys_config.windows, "ctrl+alt+w", cmd_tx);
@@ -191,7 +190,7 @@ pub fn reregister_hotkeys(
     registered.windows_hk = windows_hk;
 }
 
-/// Poll for a pending hotkey event without blocking.
+// check if a hotkey was pressed (non-blocking)
 pub fn poll_hotkey_event() -> Option<GlobalHotKeyEvent> {
     GlobalHotKeyEvent::receiver().try_recv().ok()
 }

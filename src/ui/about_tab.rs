@@ -1,7 +1,7 @@
 use super::SettingsApp;
 use egui::Ui;
 
-// These are set at compile time by build.rs and Cargo.
+// compile-time constants
 const BUILD_TARGET: &str = if cfg!(target_arch = "x86_64") {
     "x64"
 } else if cfg!(target_arch = "aarch64") {

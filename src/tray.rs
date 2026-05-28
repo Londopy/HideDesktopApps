@@ -5,7 +5,7 @@ use tray_icon::{Icon, TrayIcon, TrayIconBuilder, TrayIconEvent};
 use crate::config::ProfileConfig;
 use crate::state::AppState;
 
-/// IDs for tray menu items, including one entry per profile.
+// holds menu item ids, including one per profile
 #[derive(Clone)]
 pub struct TrayMenuIds {
     pub toggle_icons: tray_icon::menu::MenuId,
@@ -25,7 +25,7 @@ pub struct TrayHandle {
 
 pub const ICON_SIZE: usize = 64;
 
-// pixel helpers
+// pixel drawing helpers
 
 fn set_pixel(buf: &mut [u8], x: usize, y: usize, color: [u8; 4]) {
     if x >= ICON_SIZE || y >= ICON_SIZE {
@@ -43,7 +43,7 @@ fn fill_rect(buf: &mut [u8], x: usize, y: usize, w: usize, h: usize, color: [u8;
     }
 }
 
-/// Bresenham's line algorithm.
+// bresenham's line algorithm
 fn draw_line(buf: &mut [u8], x0: isize, y0: isize, x1: isize, y1: isize, color: [u8; 4]) {
     let dx = (x1 - x0).abs();
     let dy = -(y1 - y0).abs();
@@ -71,7 +71,7 @@ fn draw_line(buf: &mut [u8], x0: isize, y0: isize, x1: isize, y1: isize, color: 
     }
 }
 
-/// Mid-point circle fill algorithm.
+// fills a circle
 fn fill_circle(buf: &mut [u8], cx: isize, cy: isize, r: isize, color: [u8; 4]) {
     for dy in -r..=r {
         for dx in -r..=r {
@@ -98,10 +98,9 @@ const X_RED: [u8; 4] = [231, 76, 60, 255];
 const ORANGE_DOT: [u8; 4] = [230, 126, 34, 255];
 const TRANSPARENT: [u8; 4] = [0, 0, 0, 0];
 
-/// Draw a red diagonal X across the entire icon.
+// draw the big red X when things are hidden (3px wide)
 fn draw_x(buf: &mut [u8]) {
     let s = ICON_SIZE as isize;
-    // Draw thick X (3 pixels wide)
     for offset in -1isize..=1 {
         draw_line(buf, 0, offset, s - 1, s - 1 + offset, X_RED);
         draw_line(buf, offset, 0, s - 1 + offset, s - 1, X_RED);
@@ -110,12 +109,11 @@ fn draw_x(buf: &mut [u8]) {
     }
 }
 
-/// Build the tray icon RGBA bytes based on current app state.
+// generate the icon pixels based on what's currently hidden
 pub fn build_icon_rgba(state: &AppState) -> Vec<u8> {
     let total = ICON_SIZE * ICON_SIZE * 4;
     let mut buf = vec![0u8; total];
 
-    // Clear to transparent
     for chunk in buf.chunks_mut(4) {
         chunk.copy_from_slice(&TRANSPARENT);
     }
@@ -124,11 +122,11 @@ pub fn build_icon_rgba(state: &AppState) -> Vec<u8> {
     let border = 2;
 
     if state.icons_hidden || state.windows_hidden {
-        // All grey when icons or windows are hidden
+        // grey + X when stuff is hidden
         fill_rect(&mut buf, 0, 0, ICON_SIZE, ICON_SIZE, GREY);
         draw_x(&mut buf);
     } else {
-        // 4 coloured quadrants with white borders
+        // 4 colored blocks (normal state)
         // Top-left: Blue
         fill_rect(&mut buf, 0, 0, half - border, half - border, BLUE);
         // Top-right: Green
@@ -164,7 +162,7 @@ pub fn build_icon_rgba(state: &AppState) -> Vec<u8> {
         fill_rect(&mut buf, 0, half - border, ICON_SIZE, border * 2, WHITE);
     }
 
-    // Orange dot at bottom-right corner when taskbar is hidden
+    // orange dot = taskbar hidden
     if state.taskbar_hidden {
         fill_circle(
             &mut buf,
@@ -178,13 +176,13 @@ pub fn build_icon_rgba(state: &AppState) -> Vec<u8> {
     buf
 }
 
-/// Create or update the tray icon based on app state.
+// build the icon from current state
 fn make_icon(state: &AppState) -> Result<Icon> {
     let rgba = build_icon_rgba(state);
     Ok(Icon::from_rgba(rgba, ICON_SIZE as u32, ICON_SIZE as u32)?)
 }
 
-/// Build tooltip string from current state.
+// build the hover tooltip text
 fn build_tooltip(state: &AppState) -> String {
     let mut parts = Vec::new();
     if state.icons_hidden {
@@ -211,12 +209,12 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     let restart_item = MenuItem::new("Restart", true, None);
     let exit_item = MenuItem::new("Exit", true, None);
 
-    // Build a Profiles submenu — one item per configured profile.
+    // add a profiles submenu, one item per profile
     let profiles_submenu = Submenu::new("Profiles", true);
     let mut profile_ids: Vec<(tray_icon::menu::MenuId, String)> = Vec::new();
 
     if profiles.is_empty() {
-        // Placeholder so the submenu is not empty
+        // need at least one item in the submenu or it breaks
         let none_item = MenuItem::new("(no profiles)", false, None);
         profiles_submenu.append(&none_item)?;
     } else {
@@ -262,7 +260,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     Ok(TrayHandle { tray, ids })
 }
 
-/// Update the tray icon and tooltip after state changes.
+// refresh the tray icon and tooltip
 pub fn update_tray(handle: &TrayHandle, state: &AppState) {
     if let Ok(icon) = make_icon(state) {
         let _ = handle.tray.set_icon(Some(icon));
@@ -271,12 +269,12 @@ pub fn update_tray(handle: &TrayHandle, state: &AppState) {
     let _ = handle.tray.set_tooltip(Some(tooltip));
 }
 
-/// Poll tray menu events without blocking.
+// check for menu clicks (non-blocking)
 pub fn poll_menu_event() -> Option<MenuEvent> {
     MenuEvent::receiver().try_recv().ok()
 }
 
-/// Poll tray icon events (click, double-click) without blocking.
+// check for tray icon clicks (non-blocking)
 pub fn poll_tray_event() -> Option<TrayIconEvent> {
     TrayIconEvent::receiver().try_recv().ok()
 }

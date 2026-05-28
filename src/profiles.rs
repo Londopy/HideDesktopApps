@@ -3,7 +3,7 @@ use crate::state::AppState;
 use crate::{icons, taskbar, win_ops};
 use anyhow::Result;
 
-/// Apply a named profile: hide/show icons, taskbar, windows as specified.
+// apply a profile by name
 pub fn apply_profile(name: &str, config: &AppConfig, state: &mut AppState) -> Result<()> {
     let profile = config
         .profiles
@@ -17,7 +17,7 @@ pub fn apply_profile(name: &str, config: &AppConfig, state: &mut AppState) -> Re
     Ok(())
 }
 
-/// Apply a ProfileConfig directly.
+// apply profile settings directly
 pub fn apply_profile_config(
     profile: &ProfileConfig,
     config: &AppConfig,
@@ -61,7 +61,7 @@ pub fn apply_profile_config(
     Ok(())
 }
 
-/// Restore everything to visible state.
+// show everything again
 pub fn restore_all(state: &mut AppState) {
     if state.icons_hidden {
         if let Err(e) = icons::show_icons() {

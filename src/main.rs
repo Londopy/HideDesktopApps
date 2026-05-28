@@ -23,7 +23,7 @@ use anyhow::Result;
 use config::AppConfig;
 use state::AppState;
 
-/// Commands sent to the main loop from tray, hotkey, or settings threads.
+// commands the main loop can receive from tray, hotkeys, or the settings window
 pub enum Cmd {
     ToggleIcons,
     ToggleTaskbar,
@@ -39,7 +39,7 @@ pub enum Cmd {
 }
 
 fn main() {
-    // Install a panic handler that restores the desktop before propagating.
+    // if we panic, try to restore icons/taskbar before crashing
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         eprintln!("PANIC: {info}");
@@ -128,11 +128,9 @@ fn main_loop(
     hotkey_reg: &mut hotkeys::RegisteredHotkeys,
     last_update_check: &mut Instant,
 ) -> Result<()> {
-    // Owned so we can swap it out when the profile list changes.
     let mut tray_handle = tray_handle;
 
-    // Debounce: Windows fires WM_HOTKEY repeatedly while a key is held, which
-    // would cause rapid toggling. Ignore events within 400 ms of the last fire.
+    // debounce hotkeys — windows repeats WM_HOTKEY while you hold a key down
     let debounce = Duration::from_millis(400);
     let epoch = Instant::now()
         .checked_sub(debounce)
@@ -142,8 +140,7 @@ fn main_loop(
     let mut last_windows_fire = epoch;
 
     loop {
-        // Pump Win32 messages — tray_icon and global_hotkey both rely on a
-        // message loop on Windows.
+        // pump win32 messages so tray and hotkeys work
         #[cfg(target_os = "windows")]
         unsafe {
             use windows::Win32::UI::WindowsAndMessaging::{
@@ -158,7 +155,7 @@ fn main_loop(
 
         std::thread::sleep(Duration::from_millis(16));
 
-        // ── Poll hotkey events ────────────────────────────────────────────
+        // check hotkey events
         while let Some(event) = hotkeys::poll_hotkey_event() {
             let id = event.id();
             if id == hotkey_reg.icons_id {
@@ -192,7 +189,7 @@ fn main_loop(
             }
         }
 
-        // ── Poll tray menu events ─────────────────────────────────────────
+        // check tray menu clicks
         while let Some(event) = tray::poll_menu_event() {
             dlog!("menu event: id={:?}", event.id);
             let id = &event.id;
@@ -219,7 +216,7 @@ fn main_loop(
             }
         }
 
-        // ── Poll tray icon events (left click toggles icons) ─────────────
+        // tray left click = toggle icons
         while let Some(event) = tray::poll_tray_event() {
             use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
             if let TrayIconEvent::Click {
@@ -233,7 +230,7 @@ fn main_loop(
             }
         }
 
-        // ── Scheduled update check ────────────────────────────────────────
+        // run auto update check if enough time has passed
         {
             let cfg = config_shared.lock().unwrap().clone();
             let interval = Duration::from_secs(cfg.updater.check_interval_h as u64 * 3600);
@@ -243,7 +240,7 @@ fn main_loop(
             }
         }
 
-        // ── Process commands ──────────────────────────────────────────────
+        // handle commands from tray, hotkeys, and settings
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
                 Cmd::ToggleIcons => {
@@ -336,14 +333,14 @@ fn main_loop(
                         let mut shared = config_shared.lock().unwrap();
                         *shared = new_cfg.clone();
                     }
-                    // Re-register hotkeys with new config
+                    // update hotkeys
                     hotkeys::reregister_hotkeys(hotkey_reg, &new_cfg.hotkeys, &cmd_tx);
 
-                    // Sync startup setting
+                    // update startup task
                     let exe_path = win_ops::current_exe_path();
                     startup::sync_startup(&new_cfg.startup, &exe_path);
 
-                    // Rebuild tray so the Profiles submenu reflects the new list.
+                    // rebuild tray to update the profiles submenu
                     let state = state_shared.lock().unwrap();
                     if let Ok(new_tray) = tray::build_tray(&state, &new_cfg.profiles) {
                         tray_handle = new_tray;
@@ -352,7 +349,7 @@ fn main_loop(
 
                 Cmd::OpenSettings => {
                     dlog!("Cmd::OpenSettings received");
-                    // Runs on a background thread; the main loop keeps going.
+                    // runs in a background thread, main loop keeps going
                     ui::open_settings(Arc::clone(&config_shared), cmd_tx.clone());
                 }
 
@@ -393,7 +390,7 @@ fn main_loop(
     }
 }
 
-/// Update Discord Rich Presence if enabled.
+// update discord rich presence if it's enabled
 fn update_discord(state: &AppState, config: &AppConfig) {
     if config.discord.enabled {
         discord::set_rich_presence(

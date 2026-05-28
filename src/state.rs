@@ -1,4 +1,4 @@
-/// Stores the current visibility state of desktop elements and hidden windows.
+// tracks what's currently hidden
 #[derive(Debug, Default)]
 pub struct AppState {
     pub icons_hidden: bool,
@@ -8,12 +8,12 @@ pub struct AppState {
     pub hidden_windows: Vec<HiddenWindow>,
 }
 
-/// A window that has been hidden by the app, with its original show command saved
-/// so it can be restored correctly (e.g. maximized → restored maximized).
+// a window we hid, saved so we can restore it to the right state
+// (e.g. maximized window should come back maximized)
 #[derive(Debug, Clone)]
 pub struct HiddenWindow {
-    /// Raw HWND value stored as isize because HWND is !Send.
+    // hwnd as isize because HWND isn't Send
     pub hwnd: isize,
-    /// Original SW_SHOW* command: SW_SHOWNORMAL=1, SW_SHOWMINIMIZED=2, SW_SHOWMAXIMIZED=3.
+    // original window state: 1=normal, 2=minimized, 3=maximized
     pub show_cmd: u32,
 }

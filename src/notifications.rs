@@ -7,7 +7,7 @@ use windows::{
 
 const APP_ID: &str = "HideDesktopApps";
 
-/// Show a Windows toast notification.
+// show a windows toast notification
 pub fn show_toast(title: &str, body: &str) -> Result<()> {
     let xml_str = format!(
         r#"<toast><visual><binding template="ToastGeneric"><text>{}</text><text>{}</text></binding></visual></toast>"#,
@@ -15,8 +15,6 @@ pub fn show_toast(title: &str, body: &str) -> Result<()> {
         escape_xml(body)
     );
 
-    // SAFETY: WinRT API calls that create COM objects on the current thread.
-    // These are safe to call from any thread that has COM initialized.
     let xml = XmlDocument::new()?;
     xml.LoadXml(&HSTRING::from(xml_str))?;
     let toast = ToastNotification::CreateToastNotification(&xml)?;
@@ -25,7 +23,7 @@ pub fn show_toast(title: &str, body: &str) -> Result<()> {
     Ok(())
 }
 
-/// Escape characters that would break the toast XML.
+// escape special chars so the toast xml doesn't break
 fn escape_xml(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -34,7 +32,7 @@ fn escape_xml(s: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// Notify about an available update if notifications are enabled.
+// toast when a new version is available
 pub fn notify_update_available(version: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_update {
         return;
@@ -47,7 +45,7 @@ pub fn notify_update_available(version: &str, config: &crate::config::Notificati
     }
 }
 
-/// Notify the user when they manually checked and are already on the latest version.
+// toast when the user checked for updates and is already up to date
 pub fn notify_up_to_date(config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_update {
         return;
@@ -61,7 +59,7 @@ pub fn notify_up_to_date(config: &crate::config::NotificationsConfig) {
     }
 }
 
-/// Notify about a hotkey registration failure.
+// toast when a hotkey failed to register
 pub fn notify_hotkey_failed(hotkey: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_hotkey_fail {
         return;
@@ -74,7 +72,7 @@ pub fn notify_hotkey_failed(hotkey: &str, config: &crate::config::NotificationsC
     }
 }
 
-/// Notify when a profile is activated.
+// toast when a profile is switched
 pub fn notify_profile_switch(profile: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_profile_switch {
         return;

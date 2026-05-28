@@ -11,10 +11,10 @@ use crate::Cmd;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 
-// Stores the egui Context while the settings thread is alive.
-// None means the thread isn't running yet; Some means it's alive (possibly hidden).
+// the settings window's egui context, stored so we can wake it up later
+// None = thread not started yet, Some = running (possibly hidden)
 static SETTINGS_CTX: Mutex<Option<egui::Context>> = Mutex::new(None);
-// Set to true by open_settings to tell a hidden window to show itself.
+// set to true to tell the window to show itself
 static SETTINGS_SHOW: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -85,7 +85,7 @@ impl SettingsApp {
         }
     }
 
-    /// Persist the current config to disk and notify the main loop.
+    // save config to disk and tell the main loop about the change
     pub fn save_now(&mut self) {
         if let Err(e) = crate::config::save_config(&self.config) {
             eprintln!("Failed to save config: {e}");
@@ -100,15 +100,14 @@ impl SettingsApp {
 
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // If the main thread asked us to show up, make the window visible and focused.
+        // if the main thread wants us to show, restore and focus
         if SETTINGS_SHOW.swap(false, Ordering::SeqCst) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         }
 
-        // When the user clicks X, hide instead of closing.
-        // The thread stays alive so the next open is instant, and the window
-        // doesn't linger in the taskbar.
+        // when the user clicks X, hide instead of closing
+        // thread stays alive so reopening is instant and the window doesn't ghost in the taskbar
         if ctx.input(|i| i.viewport().close_requested()) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
@@ -134,8 +133,7 @@ impl eframe::App for SettingsApp {
             });
         });
 
-        // Auto-save at end of frame if anything changed.
-        // Skip if hotkeys are invalid (duplicate) — the hotkeys tab shows a warning.
+        // auto-save if something changed, but skip if hotkeys are duped
         if self.dirty {
             self.dirty = false;
             let h = &self.config.hotkeys;
@@ -147,10 +145,9 @@ impl eframe::App for SettingsApp {
     }
 }
 
-/// Open the settings window. If the thread is already running, restores and focuses it.
-/// If not running yet, spawns a persistent thread that lives until the app exits.
+// open the settings window, or restore it if it's already running
 pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<Cmd>) {
-    // If the settings thread is already alive, just tell it to restore the window.
+    // already running, just tell it to show itself
     let existing = SETTINGS_CTX.lock().unwrap().clone();
     if let Some(ctx) = existing {
         SETTINGS_SHOW.store(true, Ordering::SeqCst);
@@ -196,7 +193,7 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<
             "HideDesktopApps Settings",
             native_options,
             Box::new(move |cc| {
-                // Store the context so open_settings can wake us up later.
+                // save the context so open_settings can wake us up later
                 *SETTINGS_CTX.lock().unwrap() = Some(cc.egui_ctx.clone());
                 Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))
             }),

@@ -29,7 +29,7 @@ fn get_shell_defview() -> Option<HWND> {
             }
         }
 
-        // On Windows 11 DefView may be hosted inside a WorkerW, not Progman.
+        // on win11 it might be inside a WorkerW instead of Progman
         let mut found = HWND(std::ptr::null_mut());
 
         unsafe extern "system" fn find_defview_cb(
@@ -64,7 +64,7 @@ fn get_shell_defview() -> Option<HWND> {
     }
 }
 
-/// Returns true if desktop icons are currently visible.
+// check if desktop icons are currently visible
 pub fn are_icons_visible() -> bool {
     unsafe {
         let defview = match get_shell_defview() {
@@ -94,8 +94,7 @@ pub fn are_icons_visible() -> bool {
     }
 }
 
-/// Toggle desktop icon visibility by sending WM_COMMAND(0x7402) to
-/// SHELLDLL_DefView. Falls back to Progman if DefView is not found.
+// toggle icons by sending WM_COMMAND to the shell window
 pub fn toggle_icons() -> Result<()> {
     unsafe {
         let target = match get_shell_defview() {
@@ -126,7 +125,7 @@ pub fn toggle_icons() -> Result<()> {
     Ok(())
 }
 
-/// Hide desktop icons. Does nothing if already hidden.
+// hide icons, skip if already hidden
 pub fn hide_icons() -> Result<()> {
     crate::dlog!("hide_icons called");
     if are_icons_visible() {
@@ -137,7 +136,7 @@ pub fn hide_icons() -> Result<()> {
     Ok(())
 }
 
-/// Show desktop icons. Does nothing if already visible.
+// show icons, skip if already visible
 pub fn show_icons() -> Result<()> {
     crate::dlog!("show_icons called");
     if !are_icons_visible() {

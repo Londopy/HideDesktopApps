@@ -5,26 +5,23 @@ use windows::Win32::UI::WindowsAndMessaging::{
     FindWindowW, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW,
 };
 
-/// Get the main taskbar HWND.
+// find the main taskbar window
 fn get_taskbar() -> HWND {
-    // SAFETY: FFI call to find the Shell_TrayWnd (the main taskbar)
     unsafe {
         FindWindowW(w!("Shell_TrayWnd"), windows::core::PCWSTR::null())
             .unwrap_or(HWND(std::ptr::null_mut()))
     }
 }
 
-/// Get the secondary taskbar HWNDs (for multi-monitor setups).
+// get extra taskbars on other monitors
 fn get_secondary_taskbars() -> Vec<HWND> {
     let mut hwnds = Vec::new();
 
-    // SAFETY: FFI EnumWindows call with a valid callback and data pointer
     unsafe {
         unsafe extern "system" fn cb(
             hwnd: HWND,
             lparam: windows::Win32::Foundation::LPARAM,
         ) -> windows::Win32::Foundation::BOOL {
-            // SAFETY: lparam is a valid pointer to Vec<HWND> that we passed in
             let list = &mut *(lparam.0 as *mut Vec<HWND>);
             let mut class = [0u16; 256];
             windows::Win32::UI::WindowsAndMessaging::GetClassNameW(hwnd, &mut class);
@@ -46,18 +43,17 @@ fn get_secondary_taskbars() -> Vec<HWND> {
     hwnds
 }
 
-/// Returns true if the taskbar is currently visible.
+// check if the taskbar is visible
 #[allow(dead_code)]
 pub fn is_taskbar_visible() -> bool {
     let hwnd = get_taskbar();
     if hwnd.0.is_null() {
         return true;
     }
-    // SAFETY: FFI call to check window visibility
     unsafe { IsWindowVisible(hwnd).as_bool() }
 }
 
-/// Hide the taskbar (main + all secondary monitors).
+// hide taskbar on all monitors
 pub fn hide_taskbar() -> Result<()> {
     let primary = get_taskbar();
     crate::dlog!(
@@ -79,7 +75,7 @@ pub fn hide_taskbar() -> Result<()> {
     Ok(())
 }
 
-/// Show the taskbar (main + all secondary monitors).
+// show taskbar on all monitors
 pub fn show_taskbar() -> Result<()> {
     let primary = get_taskbar();
     crate::dlog!(
@@ -101,7 +97,7 @@ pub fn show_taskbar() -> Result<()> {
     Ok(())
 }
 
-/// Toggle taskbar visibility.
+// toggle the taskbar
 #[allow(dead_code)]
 pub fn toggle_taskbar() -> Result<bool> {
     if is_taskbar_visible() {

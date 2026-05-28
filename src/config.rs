@@ -118,8 +118,7 @@ impl Default for DiscordConfig {
 impl Default for WindowFilterConfig {
     fn default() -> Self {
         Self {
-            // Processes whose windows should never be hidden —
-            // password managers and system processes you don't want disappearing.
+            // never hide these — password managers and system stuff
             exclude_processes: vec![
                 "1password".to_string(),
                 "taskmgr".to_string(),
@@ -156,10 +155,10 @@ impl Default for AppConfig {
     }
 }
 
-/// Three built-in profiles included on first run.
+// the 3 default profiles on first run
 fn default_profiles() -> Vec<ProfileConfig> {
     vec![
-        // Focus: hide icons + taskbar, leave windows alone
+        // hide icons + taskbar, leave windows alone
         ProfileConfig {
             name: "Focus".to_string(),
             hotkey: "ctrl+alt+f".to_string(),
@@ -167,7 +166,7 @@ fn default_profiles() -> Vec<ProfileConfig> {
             taskbar: true,
             windows: false,
         },
-        // Presentation: hide everything
+        // hide everything
         ProfileConfig {
             name: "Presentation".to_string(),
             hotkey: "ctrl+alt+p".to_string(),
@@ -175,7 +174,7 @@ fn default_profiles() -> Vec<ProfileConfig> {
             taskbar: true,
             windows: true,
         },
-        // Clean Desktop: hide icons only, keep taskbar visible
+        // just icons
         ProfileConfig {
             name: "Clean Desktop".to_string(),
             hotkey: String::new(),
@@ -187,7 +186,7 @@ fn default_profiles() -> Vec<ProfileConfig> {
 }
 
 pub fn config_dir() -> Result<PathBuf> {
-    // Check for portable mode: if a file named "portable" exists next to the exe
+    // portable mode: if there's a "portable" file next to the exe, use that folder
     if let Ok(exe) = std::env::current_exe() {
         let portable_marker = exe
             .parent()
@@ -211,8 +210,7 @@ pub fn config_path() -> Result<PathBuf> {
     Ok(config_dir()?.join("config.toml"))
 }
 
-/// Parse a legacy config.ini from the Python version and return an AppConfig.
-/// Also removes the old VBS startup launcher if it's in the same directory.
+// migrates old config.ini from the python version of the app
 fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppConfig> {
     let content = std::fs::read_to_string(ini_path)?;
     let mut config = AppConfig::default();
@@ -231,7 +229,7 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
             continue;
         }
         if let Some((key, value)) = line.split_once('=') {
-            // The Python ini used snake_case keys inside [Settings] etc.
+            // old python version used snake_case keys inside [Settings] etc.
             let key = key.trim().to_lowercase();
             let key = key
                 .trim_start_matches("settings.")
@@ -267,7 +265,7 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
                     config.discord.enabled = value.eq_ignore_ascii_case("true") || value == "1";
                 }
                 "icons_hidden" => {
-                    // Python version could persist state; create a "Launch Hidden" profile.
+                    // old python version could save icons state, carry it forward
                     icons_hidden_on_start = value.eq_ignore_ascii_case("true") || value == "1";
                 }
                 _ => {}
@@ -275,7 +273,7 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
         }
     }
 
-    // If the old config had icons hidden at startup, create a matching profile.
+    // if it was set to start with icons hidden, create a profile for that
     if icons_hidden_on_start {
         config.profiles.push(ProfileConfig {
             name: "Launch Hidden".to_string(),
@@ -288,7 +286,7 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
         log_lines.push("  created 'Launch Hidden' profile (icons_hidden was true)".to_string());
     }
 
-    // Remove the old VBS startup launcher if it exists next to the ini.
+    // delete the old vbs launcher if it's still there
     let vbs = dir.join("HideDesktopApps.vbs");
     if vbs.exists() {
         if let Err(e) = std::fs::remove_file(&vbs) {
@@ -298,7 +296,7 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
         }
     }
 
-    // Write a migration log alongside the config.
+    // write a log file so we know what got migrated
     let log_path = dir.join("migration.log");
     let _ = std::fs::write(&log_path, log_lines.join("\n") + "\n");
 
@@ -309,7 +307,7 @@ pub fn load_config() -> Result<AppConfig> {
     let path = config_path()?;
 
     if !path.exists() {
-        // Check for legacy config.ini to migrate
+        // check if there's an old config.ini to migrate from
         let dir = config_dir()?;
         let ini_path = dir.join("config.ini");
         if ini_path.exists() {
@@ -317,7 +315,7 @@ pub fn load_config() -> Result<AppConfig> {
             match migrate_ini(&ini_path, &dir) {
                 Ok(cfg) => {
                     save_config(&cfg)?;
-                    // Rename so migration doesn't run again
+                    // rename it so we don't try to migrate again
                     let _ = std::fs::rename(&ini_path, dir.join("config.ini.migrated"));
                     return Ok(cfg);
                 }

@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 
 const DISCORD_APP_ID: &str = "1506489357534761111";
 
-// Tries pipe indices 0-9 since Discord can use any of them.
+// discord can use any pipe 0-9, just try them all
 fn open_pipe() -> Option<File> {
     for i in 0..10 {
         let path = format!(r"\\.\pipe\discord-ipc-{}", i);
@@ -18,7 +18,7 @@ fn open_pipe() -> Option<File> {
     None
 }
 
-// IPC wire format: 4-byte LE opcode, 4-byte LE length, then the JSON payload.
+// discord ipc format: opcode (4 bytes) + length (4 bytes) + json payload
 fn send_message(pipe: &mut File, opcode: u32, payload: &str) -> std::io::Result<()> {
     let data = payload.as_bytes();
     let mut msg = Vec::with_capacity(8 + data.len());
@@ -38,18 +38,14 @@ fn read_message(pipe: &mut File) -> std::io::Result<(u32, String)> {
     Ok((opcode, String::from_utf8_lossy(&payload).to_string()))
 }
 
-/// Update rich presence based on current app state.
-///
-/// - Nothing hidden  → clears the activity entirely
-/// - Profile active  → shows the profile name
-/// - Manual changes  → shows "Custom"
+// updates discord rich presence based on what's currently hidden
 pub fn set_rich_presence(
     icons_hidden: bool,
     taskbar_hidden: bool,
     windows_hidden: bool,
     active_profile: Option<String>,
 ) {
-    // Nothing is hidden — clear rather than showing a stale status.
+    // if nothing is hidden, clear the presence instead of showing stale info
     if !icons_hidden && !taskbar_hidden && !windows_hidden {
         clear_rich_presence();
         return;
@@ -72,18 +68,18 @@ fn set_presence_inner(
 ) -> anyhow::Result<()> {
     let mut pipe = open_pipe().ok_or_else(|| anyhow::anyhow!("Discord IPC pipe not found"))?;
 
-    // Opcode 0 = handshake
+    // 0 = handshake
     let handshake = serde_json::json!({ "v": 1, "client_id": DISCORD_APP_ID });
     send_message(&mut pipe, 0, &handshake.to_string())?;
     let _ = read_message(&mut pipe)?;
 
-    // State line: profile name if a profile is active, otherwise "Custom"
+    // show profile name if one is active, otherwise "Custom"
     let state_str = match &active_profile {
         Some(name) => name.clone(),
         None => "Custom".to_string(),
     };
 
-    // Details line: which things are currently hidden (spec format: "Icons · Taskbar hidden")
+    // show which things are hidden
     let mut parts = Vec::new();
     if icons_hidden {
         parts.push("Icons");
@@ -96,10 +92,9 @@ fn set_presence_inner(
     }
     let details = format!("{} hidden", parts.join(" · "));
 
-    // SAFETY: GetCurrentProcessId is always safe to call
     let pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
 
-    // Opcode 1 = frame (SET_ACTIVITY)
+    // 1 = SET_ACTIVITY
     let activity = serde_json::json!({
         "cmd": "SET_ACTIVITY",
         "args": {
@@ -117,7 +112,7 @@ fn set_presence_inner(
     Ok(())
 }
 
-/// Clear Discord Rich Presence (called when nothing is hidden).
+// clears discord presence (called when nothing is hidden)
 pub fn clear_rich_presence() {
     std::thread::spawn(|| {
         if let Err(e) = clear_presence_inner() {
@@ -133,7 +128,6 @@ fn clear_presence_inner() -> anyhow::Result<()> {
     send_message(&mut pipe, 0, &handshake.to_string())?;
     let _ = read_message(&mut pipe)?;
 
-    // SAFETY: always safe
     let pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
 
     let clear = serde_json::json!({

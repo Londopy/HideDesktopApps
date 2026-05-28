@@ -6,10 +6,10 @@ use winreg::RegKey;
 
 const TASK_NAME: &str = "HideDesktopApps";
 const APP_NAME: &str = "HideDesktopApps";
-// Suppress the console window that PowerShell/schtasks would otherwise flash.
+// hide the powershell window that would otherwise flash on screen
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-/// Run a hidden PowerShell command and return an error if it fails.
+// runs a powershell command hidden
 fn powershell(script: &str) -> Result<()> {
     let status = std::process::Command::new("powershell.exe")
         .args([
@@ -27,7 +27,7 @@ fn powershell(script: &str) -> Result<()> {
     Ok(())
 }
 
-/// Path of the old VBS launcher — cleaned up on migration.
+// path of the old vbs launcher from the python version
 fn legacy_vbs_path() -> PathBuf {
     let appdata = std::env::var("APPDATA").unwrap_or_default();
     PathBuf::from(appdata)
@@ -39,14 +39,14 @@ fn legacy_vbs_path() -> PathBuf {
         .join("HideDesktopApps.vbs")
 }
 
-/// Remove any leftover startup entries from older installs.
+// clean up old startup entries from older versions of the app
 fn cleanup_legacy() {
-    // Old VBS launcher
+    // old vbs file
     let vbs = legacy_vbs_path();
     if vbs.exists() {
         let _ = std::fs::remove_file(&vbs);
     }
-    // Old registry Run entry
+    // old registry Run key
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     if let Ok(key) = hkcu.open_subkey_with_flags(
         r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -56,12 +56,11 @@ fn cleanup_legacy() {
     }
 }
 
-/// Register a scheduled task that runs the app at logon with an optional delay.
-/// Uses the same PowerShell approach as the installer so both agree on the task name.
+// register a scheduled task to run the app at login with an optional delay
 pub fn register(exe_path: &str, delay_s: u32) -> Result<()> {
-    // ISO 8601 duration, e.g. PT30S for 30 seconds.
+    // delay format is PT30S for 30 seconds, PT0S for no delay
     let delay = format!("PT{}S", delay_s);
-    // Escape single quotes inside the exe path for use in a PowerShell string.
+    // escape quotes in the path for powershell
     let escaped = exe_path.replace('\'', "''");
     let script = format!(
         "$t = New-ScheduledTaskTrigger -AtLogOn; \
@@ -75,7 +74,7 @@ pub fn register(exe_path: &str, delay_s: u32) -> Result<()> {
     Ok(())
 }
 
-/// Remove the scheduled task (and any legacy startup entries).
+// remove the startup task
 pub fn unregister() -> Result<()> {
     let script = format!(
         "Unregister-ScheduledTask -TaskName '{TASK_NAME}' -Confirm:$false -ErrorAction SilentlyContinue"
@@ -85,7 +84,7 @@ pub fn unregister() -> Result<()> {
     Ok(())
 }
 
-/// Returns true if the scheduled task exists.
+// check if the startup task is registered
 pub fn is_registered() -> bool {
     std::process::Command::new("schtasks.exe")
         .args(["/query", "/tn", TASK_NAME])
@@ -95,7 +94,7 @@ pub fn is_registered() -> bool {
         .unwrap_or(false)
 }
 
-/// Sync the startup task to match config — called on every app startup.
+// make sure the startup task matches what's in the config
 pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
     crate::dlog!("sync_startup: enabled={}, exe={}", config.enabled, exe_path);
     if config.enabled {
@@ -119,8 +118,7 @@ pub fn sync_startup(config: &crate::config::StartupConfig, exe_path: &str) {
     }
 }
 
-/// Register the AppUserModelId in the registry and set it for the current process.
-/// Windows requires this for toast notifications to work reliably.
+// register the app id so windows toast notifications work
 pub fn setup_aumid() {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     if let Ok((key, _)) = hkcu.create_subkey(r"SOFTWARE\Classes\AppUserModelId\HideDesktopApps") {

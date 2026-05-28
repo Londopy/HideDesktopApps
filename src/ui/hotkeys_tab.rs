@@ -1,8 +1,7 @@
 use super::SettingsApp;
 use egui::Ui;
 
-/// Parse a hotkey string into (modifiers, key) for editing.
-/// Returns (ctrl, alt, shift, win, key_char).
+// split a hotkey string so we can show it in the editor
 fn parse_for_edit(s: &str) -> (bool, bool, bool, bool, String) {
     let parts: Vec<&str> = s.split('+').collect();
     let key = parts.last().cloned().unwrap_or("").trim().to_uppercase();
@@ -18,7 +17,7 @@ fn parse_for_edit(s: &str) -> (bool, bool, bool, bool, String) {
     (ctrl, alt, shift, win, key)
 }
 
-/// Rebuild a hotkey string from components.
+// put the hotkey string back together from parts
 fn build_hotkey(ctrl: bool, alt: bool, shift: bool, win: bool, key: &str) -> String {
     let mut parts = Vec::new();
     if ctrl {
@@ -37,7 +36,7 @@ fn build_hotkey(ctrl: bool, alt: bool, shift: bool, win: bool, key: &str) -> Str
     parts.join("+")
 }
 
-/// Show one hotkey editor block. Returns the new hotkey string.
+// renders a hotkey editor for one action
 fn hotkey_editor(ui: &mut Ui, label: &str, current: &str) -> String {
     let (mut ctrl, mut alt, mut shift, mut win, mut key) = parse_for_edit(current);
 
@@ -103,7 +102,7 @@ impl SettingsApp {
             self.dirty = true;
         }
 
-        // Inline duplicate warning — save is blocked until this clears.
+        // warn if any two hotkeys are the same (save is blocked until fixed)
         let h = &self.config.hotkeys;
         if h.icons == h.taskbar || h.icons == h.windows || h.taskbar == h.windows {
             ui.colored_label(
