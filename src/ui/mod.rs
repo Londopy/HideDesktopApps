@@ -102,15 +102,16 @@ impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // If the main thread asked us to show up, make the window visible and focused.
         if SETTINGS_SHOW.swap(false, Ordering::SeqCst) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         }
 
-        // When the user clicks X, minimize instead of closing.
-        // The thread stays alive so the next open is instant and reliable.
+        // When the user clicks X, hide instead of closing.
+        // The thread stays alive so the next open is instant, and the window
+        // doesn't linger in the taskbar.
         if ctx.input(|i| i.viewport().close_requested()) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             return;
         }
 
@@ -171,7 +172,11 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<
         let icon = {
             let rgba = crate::tray::build_icon_rgba(&crate::state::AppState::default());
             let size = crate::tray::ICON_SIZE as u32;
-            std::sync::Arc::new(egui::IconData { rgba, width: size, height: size })
+            std::sync::Arc::new(egui::IconData {
+                rgba,
+                width: size,
+                height: size,
+            })
         };
 
         let native_options = eframe::NativeOptions {

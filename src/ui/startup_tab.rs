@@ -32,7 +32,10 @@ impl SettingsApp {
         self.startup_registered = registered;
 
         let (task_text, task_color) = if registered {
-            ("Task registered: Yes", egui::Color32::from_rgb(80, 200, 100))
+            (
+                "Task registered: Yes",
+                egui::Color32::from_rgb(80, 200, 100),
+            )
         } else {
             ("Task registered: No", egui::Color32::from_rgb(220, 100, 80))
         };

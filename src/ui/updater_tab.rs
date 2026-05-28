@@ -135,7 +135,11 @@ impl SettingsApp {
             ui.weak(format!(
                 "Auto-checks every {} hour{}.",
                 self.config.updater.check_interval_h,
-                if self.config.updater.check_interval_h == 1 { "" } else { "s" }
+                if self.config.updater.check_interval_h == 1 {
+                    ""
+                } else {
+                    "s"
+                }
             ));
         }
 
