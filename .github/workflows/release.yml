@@ -39,6 +39,20 @@ jobs:
           rustup default stable
           rustup target add ${{ matrix.target }}
 
+      - name: Set version from tag
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          $lines = Get-Content Cargo.toml
+          $done = $false
+          $lines = $lines | ForEach-Object {
+            if (!$done -and $_ -match '^version\s*=\s*"') {
+              $done = $true
+              "version = `"$ver`""
+            } else { $_ }
+          }
+          $lines | Set-Content Cargo.toml
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -92,6 +106,20 @@ jobs:
         run: |
           rustup update stable
           rustup default stable
+
+      - name: Set version from tag
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          $lines = Get-Content Cargo.toml
+          $done = $false
+          $lines = $lines | ForEach-Object {
+            if (!$done -and $_ -match '^version\s*=\s*"') {
+              $done = $true
+              "version = `"$ver`""
+            } else { $_ }
+          }
+          $lines | Set-Content Cargo.toml
 
       - name: Cache cargo registry
         uses: actions/cache@v4

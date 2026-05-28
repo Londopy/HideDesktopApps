@@ -1,6 +1,6 @@
 [package]
 name = "HideDesktopApps"
-version = "1.0.7"
+version = "1.0.10"
 edition = "2021"
 description = "System tray app to hide/show desktop icons, taskbar, and windows via hotkeys"
 repository = "https://github.com/Londopy/HideDesktopApps"

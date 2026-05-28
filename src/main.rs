@@ -131,6 +131,16 @@ fn main_loop(
     // Owned so we can swap it out when the profile list changes.
     let mut tray_handle = tray_handle;
 
+    // Debounce: Windows fires WM_HOTKEY repeatedly while a key is held, which
+    // would cause rapid toggling. Ignore events within 400 ms of the last fire.
+    let debounce = Duration::from_millis(400);
+    let epoch = Instant::now()
+        .checked_sub(debounce)
+        .unwrap_or_else(Instant::now);
+    let mut last_icons_fire = epoch;
+    let mut last_taskbar_fire = epoch;
+    let mut last_windows_fire = epoch;
+
     loop {
         // Pump Win32 messages — tray_icon and global_hotkey both rely on a
         // message loop on Windows.
@@ -152,11 +162,20 @@ fn main_loop(
         while let Some(event) = hotkeys::poll_hotkey_event() {
             let id = event.id();
             if id == hotkey_reg.icons_id {
-                let _ = cmd_tx.send(Cmd::ToggleIcons);
+                if last_icons_fire.elapsed() >= debounce {
+                    last_icons_fire = Instant::now();
+                    let _ = cmd_tx.send(Cmd::ToggleIcons);
+                }
             } else if id == hotkey_reg.taskbar_id {
-                let _ = cmd_tx.send(Cmd::ToggleTaskbar);
+                if last_taskbar_fire.elapsed() >= debounce {
+                    last_taskbar_fire = Instant::now();
+                    let _ = cmd_tx.send(Cmd::ToggleTaskbar);
+                }
             } else if id == hotkey_reg.windows_id {
-                let _ = cmd_tx.send(Cmd::ToggleWindows);
+                if last_windows_fire.elapsed() >= debounce {
+                    last_windows_fire = Instant::now();
+                    let _ = cmd_tx.send(Cmd::ToggleWindows);
+                }
             } else {
                 // Check profile hotkeys
                 let cfg = config_shared.lock().unwrap().clone();

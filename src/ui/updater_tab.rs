@@ -64,28 +64,56 @@ impl SettingsApp {
         ui.add_space(8.0);
         ui.separator();
 
-        let current_version = env!("CARGO_PKG_VERSION");
-        ui.label(format!("Current version: {}", current_version));
+        ui.label(format!("Current version: v{}", env!("CARGO_PKG_VERSION")));
+
+        ui.add_space(4.0);
+
+        // Poll the background check result each frame and update the status label.
+        if let Some(rx) = &self.update_check_rx {
+            if let Ok(result) = rx.try_recv() {
+                self.update_check_rx = None;
+                match result {
+                    Ok(Some(v)) => {
+                        self.update_status = Some(format!("Update available: v{v}"));
+                        // Also let the main loop fire a tray notification.
+                        let _ = self.cmd_tx.send(crate::Cmd::UpdateAvailable(v));
+                    }
+                    Ok(None) => {
+                        self.update_status = Some("You are up to date!".to_string());
+                    }
+                    Err(e) => {
+                        self.update_status = Some(format!("Check failed: {e}"));
+                    }
+                }
+            }
+        }
 
         if let Some(ref status) = self.update_status.clone() {
-            ui.colored_label(egui::Color32::GREEN, status);
+            let color = if status.starts_with("Update available") {
+                egui::Color32::YELLOW
+            } else if status.starts_with("Check failed") {
+                egui::Color32::RED
+            } else {
+                egui::Color32::GREEN
+            };
+            ui.colored_label(color, status);
         }
 
         ui.add_space(4.0);
         ui.horizontal(|ui| {
-            if ui.button("Check Now").clicked() {
+            let checking = self.update_check_rx.is_some();
+
+            if ui
+                .add_enabled(!checking, egui::Button::new("Check Now"))
+                .clicked()
+            {
                 let channel = self.config.updater.channel.clone();
-                let tx = self.cmd_tx.clone();
-                std::thread::spawn(move || match crate::updater::check_for_update(&channel) {
-                    Ok(Some(v)) => {
-                        let _ = tx.send(crate::Cmd::UpdateAvailable(v));
-                    }
-                    Ok(None) => {
-                        let _ = tx.send(crate::Cmd::UpToDate);
-                    }
-                    Err(e) => {
-                        eprintln!("Update check failed: {e}");
-                    }
+                let (tx, rx) = std::sync::mpsc::channel();
+                self.update_check_rx = Some(rx);
+                std::thread::spawn(move || {
+                    let result =
+                        crate::updater::check_for_update(&channel).map_err(|e| e.to_string());
+                    let _ = tx.send(result);
                 });
                 self.update_status = Some("Checking...".to_string());
             }

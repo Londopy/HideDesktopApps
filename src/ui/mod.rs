@@ -9,10 +9,13 @@ mod updater_tab;
 use crate::config::AppConfig;
 use crate::Cmd;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 
-// Prevents opening a second settings window while one is already showing.
-static SETTINGS_OPEN: AtomicBool = AtomicBool::new(false);
+// Stores the egui Context while the settings thread is alive.
+// None means the thread isn't running yet; Some means it's alive (possibly hidden).
+static SETTINGS_CTX: Mutex<Option<egui::Context>> = Mutex::new(None);
+// Set to true by open_settings to tell a hidden window to show itself.
+static SETTINGS_SHOW: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -54,9 +57,11 @@ impl Tab {
 pub struct SettingsApp {
     pub config: AppConfig,
     pub config_shared: Arc<Mutex<AppConfig>>,
-    pub cmd_tx: std::sync::mpsc::Sender<Cmd>,
+    pub cmd_tx: mpsc::Sender<Cmd>,
     pub current_tab: Tab,
     pub update_status: Option<String>,
+    /// Receives the result of a background update check so the UI can show it.
+    pub update_check_rx: Option<mpsc::Receiver<Result<Option<String>, String>>>,
     pub startup_registered: bool,
     pub startup_error: Option<String>,
     /// Set to true by any tab that modifies config; triggers a save at end of frame.
@@ -64,7 +69,7 @@ pub struct SettingsApp {
 }
 
 impl SettingsApp {
-    pub fn new(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mpsc::Sender<Cmd>) -> Self {
+    pub fn new(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<Cmd>) -> Self {
         let config = config_shared.lock().unwrap().clone();
         let startup_registered = crate::startup::is_registered();
         Self {
@@ -73,6 +78,7 @@ impl SettingsApp {
             cmd_tx,
             current_tab: Tab::Hotkeys,
             update_status: None,
+            update_check_rx: None,
             startup_registered,
             startup_error: None,
             dirty: false,
@@ -80,7 +86,6 @@ impl SettingsApp {
     }
 
     /// Persist the current config to disk and notify the main loop.
-    /// Does not validate hotkeys — the hotkeys tab handles that inline.
     pub fn save_now(&mut self) {
         if let Err(e) = crate::config::save_config(&self.config) {
             eprintln!("Failed to save config: {e}");
@@ -95,6 +100,20 @@ impl SettingsApp {
 
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // If the main thread asked us to show up, make the window visible and focused.
+        if SETTINGS_SHOW.swap(false, Ordering::SeqCst) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+        }
+
+        // When the user clicks X, minimize instead of closing.
+        // The thread stays alive so the next open is instant and reliable.
+        if ctx.input(|i| i.viewport().close_requested()) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+            return;
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 for &tab in Tab::all() {
@@ -115,7 +134,7 @@ impl eframe::App for SettingsApp {
         });
 
         // Auto-save at end of frame if anything changed.
-        // Skip if hotkeys are currently invalid (duplicate) — the tab shows a warning.
+        // Skip if hotkeys are invalid (duplicate) — the hotkeys tab shows a warning.
         if self.dirty {
             self.dirty = false;
             let h = &self.config.hotkeys;
@@ -127,22 +146,27 @@ impl eframe::App for SettingsApp {
     }
 }
 
-/// Open the settings window on a background thread so the main loop keeps running.
-/// If a settings window is already open, this is a no-op.
-pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mpsc::Sender<Cmd>) {
-    if SETTINGS_OPEN.swap(true, Ordering::SeqCst) {
+/// Open the settings window. If the thread is already running, restores and focuses it.
+/// If not running yet, spawns a persistent thread that lives until the app exits.
+pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<Cmd>) {
+    // If the settings thread is already alive, just tell it to restore the window.
+    let existing = SETTINGS_CTX.lock().unwrap().clone();
+    if let Some(ctx) = existing {
+        SETTINGS_SHOW.store(true, Ordering::SeqCst);
+        ctx.request_repaint();
         return;
     }
 
     std::thread::spawn(move || {
-        // Resets the flag when dropped — even if run_native panics.
-        struct OpenGuard;
-        impl Drop for OpenGuard {
+        // Clear the stored context when this thread exits for any reason.
+        struct Guard;
+        impl Drop for Guard {
             fn drop(&mut self) {
-                SETTINGS_OPEN.store(false, Ordering::SeqCst);
+                *SETTINGS_CTX.lock().unwrap() = None;
+                SETTINGS_SHOW.store(false, Ordering::SeqCst);
             }
         }
-        let _guard = OpenGuard;
+        let _guard = Guard;
 
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -159,13 +183,16 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: std::sync::mp
         let result = eframe::run_native(
             "HideDesktopApps Settings",
             native_options,
-            Box::new(move |_cc| Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))),
+            Box::new(move |cc| {
+                // Store the context so open_settings can wake us up later.
+                *SETTINGS_CTX.lock().unwrap() = Some(cc.egui_ctx.clone());
+                Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))
+            }),
         );
 
         if let Err(e) = result {
             crate::dlog!("Settings window error: {}", e);
             eprintln!("Settings window error: {e}");
         }
-        // _guard drops here, resetting SETTINGS_OPEN
     });
 }

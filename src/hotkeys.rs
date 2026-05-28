@@ -87,47 +87,43 @@ fn parse_key_code(key: &str) -> Result<Code> {
     Ok(code)
 }
 
-/// Registered hotkeys with their associated IDs.
+/// Registered hotkeys with their IDs and the original HotKey objects (needed for unregister).
 pub struct RegisteredHotkeys {
-    #[allow(dead_code)]
     pub manager: GlobalHotKeyManager,
     pub icons_id: u32,
     pub taskbar_id: u32,
     pub windows_id: u32,
+    icons_hk: HotKey,
+    taskbar_hk: HotKey,
+    windows_hk: HotKey,
 }
 
-/// Register all three hotkeys from config. Returns errors per-hotkey so partial
-/// registration is possible (we still function with 2/3 hotkeys working).
+/// Parse a hotkey string, falling back to a default and notifying on failure.
+fn parse_or_default(
+    s: &str,
+    fallback: &str,
+    cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
+) -> HotKey {
+    match parse_hotkey(s) {
+        Ok(hk) => hk,
+        Err(e) => {
+            eprintln!("Failed to parse hotkey '{}': {e}", s);
+            let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(s.to_string()));
+            parse_hotkey(fallback).unwrap()
+        }
+    }
+}
+
+/// Register all three hotkeys from config.
 pub fn register_hotkeys(
     hotkeys_config: &crate::config::HotkeysConfig,
     cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
-) -> Result<RegisteredHotkeys> {
+) -> anyhow::Result<RegisteredHotkeys> {
     let manager = GlobalHotKeyManager::new()?;
 
-    let icons_hk = match parse_hotkey(&hotkeys_config.icons) {
-        Ok(hk) => hk,
-        Err(e) => {
-            eprintln!("Failed to parse icons hotkey: {e}");
-            let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(hotkeys_config.icons.clone()));
-            parse_hotkey("ctrl+alt+h").unwrap()
-        }
-    };
-    let taskbar_hk = match parse_hotkey(&hotkeys_config.taskbar) {
-        Ok(hk) => hk,
-        Err(e) => {
-            eprintln!("Failed to parse taskbar hotkey: {e}");
-            let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(hotkeys_config.taskbar.clone()));
-            parse_hotkey("ctrl+alt+t").unwrap()
-        }
-    };
-    let windows_hk = match parse_hotkey(&hotkeys_config.windows) {
-        Ok(hk) => hk,
-        Err(e) => {
-            eprintln!("Failed to parse windows hotkey: {e}");
-            let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(hotkeys_config.windows.clone()));
-            parse_hotkey("ctrl+alt+w").unwrap()
-        }
-    };
+    let icons_hk = parse_or_default(&hotkeys_config.icons, "ctrl+alt+h", cmd_tx);
+    let taskbar_hk = parse_or_default(&hotkeys_config.taskbar, "ctrl+alt+t", cmd_tx);
+    let windows_hk = parse_or_default(&hotkeys_config.windows, "ctrl+alt+w", cmd_tx);
 
     let icons_id = icons_hk.id();
     let taskbar_id = taskbar_hk.id();
@@ -151,16 +147,48 @@ pub fn register_hotkeys(
         icons_id,
         taskbar_id,
         windows_id,
+        icons_hk,
+        taskbar_hk,
+        windows_hk,
     })
 }
 
-/// Re-register hotkeys after a config change (unregister old ones first).
+/// Unregister old hotkeys and register new ones after a config change.
 pub fn reregister_hotkeys(
-    _registered: &mut RegisteredHotkeys,
-    _hotkeys_config: &crate::config::HotkeysConfig,
-    _cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
+    registered: &mut RegisteredHotkeys,
+    hotkeys_config: &crate::config::HotkeysConfig,
+    cmd_tx: &std::sync::mpsc::Sender<crate::Cmd>,
 ) {
-    // Unregister all current hotkeys
+    // Unregister existing hotkeys (ignore errors — they may already be gone).
+    let _ = registered.manager.unregister(registered.icons_hk);
+    let _ = registered.manager.unregister(registered.taskbar_hk);
+    let _ = registered.manager.unregister(registered.windows_hk);
+
+    // Parse new hotkeys.
+    let icons_hk = parse_or_default(&hotkeys_config.icons, "ctrl+alt+h", cmd_tx);
+    let taskbar_hk = parse_or_default(&hotkeys_config.taskbar, "ctrl+alt+t", cmd_tx);
+    let windows_hk = parse_or_default(&hotkeys_config.windows, "ctrl+alt+w", cmd_tx);
+
+    registered.icons_id = icons_hk.id();
+    registered.taskbar_id = taskbar_hk.id();
+    registered.windows_id = windows_hk.id();
+
+    if let Err(e) = registered.manager.register(icons_hk) {
+        eprintln!("Re-register icons hotkey failed: {e}");
+        let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(hotkeys_config.icons.clone()));
+    }
+    if let Err(e) = registered.manager.register(taskbar_hk) {
+        eprintln!("Re-register taskbar hotkey failed: {e}");
+        let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(hotkeys_config.taskbar.clone()));
+    }
+    if let Err(e) = registered.manager.register(windows_hk) {
+        eprintln!("Re-register windows hotkey failed: {e}");
+        let _ = cmd_tx.send(crate::Cmd::HotkeyFailed(hotkeys_config.windows.clone()));
+    }
+
+    registered.icons_hk = icons_hk;
+    registered.taskbar_hk = taskbar_hk;
+    registered.windows_hk = windows_hk;
 }
 
 /// Poll for a pending hotkey event without blocking.
