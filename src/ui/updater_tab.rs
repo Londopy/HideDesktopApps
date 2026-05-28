@@ -121,7 +121,7 @@ impl SettingsApp {
             let update_ready = self
                 .update_status
                 .as_deref()
-                .map_or(false, |s| s.starts_with("Update available"));
+                .is_some_and(|s| s.starts_with("Update available"));
 
             if update_ready && ui.button("Download & Install Update").clicked() {
                 let channel = self.config.updater.channel.clone();
