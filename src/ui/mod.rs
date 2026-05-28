@@ -102,15 +102,16 @@ impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // if the main thread wants us to show, restore and focus
         if SETTINGS_SHOW.swap(false, Ordering::SeqCst) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         }
 
-        // when the user clicks X, hide instead of closing
-        // thread stays alive so reopening is instant and the window doesn't ghost in the taskbar
+        // when the user clicks X, minimize instead of closing
+        // thread stays alive so reopening is instant
+        // window doesn't show in taskbar because we used with_taskbar(false)
         if ctx.input(|i| i.viewport().close_requested()) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
             return;
         }
 
@@ -181,7 +182,9 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<
                 .with_title("HideDesktopApps Settings")
                 .with_inner_size([600.0, 480.0])
                 .with_resizable(true)
-                .with_icon(icon),
+                .with_icon(icon)
+                // keep it out of the taskbar — we show/hide by minimizing
+                .with_taskbar(false),
             event_loop_builder: Some(Box::new(|builder| {
                 use winit::platform::windows::EventLoopBuilderExtWindows;
                 builder.with_any_thread(true);
