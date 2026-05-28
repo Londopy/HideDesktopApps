@@ -15,12 +15,14 @@ impl SettingsApp {
         {
             self.dirty = true;
         }
-        ui.label("Places a launcher in your Windows Startup folder.");
 
         ui.add_space(8.0);
         ui.separator();
 
-        let registered = self.startup_registered;
+        // Query the registry directly so the status is always accurate.
+        let registered = crate::startup::is_registered();
+        self.startup_registered = registered;
+
         ui.label(if registered {
             "Status: Registered in startup."
         } else {
@@ -30,20 +32,25 @@ impl SettingsApp {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             if ui.button("Register Now").clicked() {
+                self.startup_error = None;
                 let exe = crate::win_ops::current_exe_path();
-                if let Err(e) = crate::startup::register(&exe, 0) {
-                    eprintln!("Startup register error: {e}");
-                } else {
-                    self.startup_registered = true;
+                match crate::startup::register(&exe, 0) {
+                    Ok(()) => self.startup_registered = true,
+                    Err(e) => self.startup_error = Some(format!("Register failed: {e}")),
                 }
             }
             if ui.button("Unregister").clicked() {
-                if let Err(e) = crate::startup::unregister() {
-                    eprintln!("Startup unregister error: {e}");
-                } else {
-                    self.startup_registered = false;
+                self.startup_error = None;
+                match crate::startup::unregister() {
+                    Ok(()) => self.startup_registered = false,
+                    Err(e) => self.startup_error = Some(format!("Unregister failed: {e}")),
                 }
             }
         });
+
+        if let Some(ref err) = self.startup_error {
+            ui.add_space(4.0);
+            ui.colored_label(egui::Color32::RED, err);
+        }
     }
 }

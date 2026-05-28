@@ -58,6 +58,7 @@ pub struct SettingsApp {
     pub current_tab: Tab,
     pub update_status: Option<String>,
     pub startup_registered: bool,
+    pub startup_error: Option<String>,
     /// Set to true by any tab that modifies config; triggers a save at end of frame.
     pub dirty: bool,
 }
@@ -73,6 +74,7 @@ impl SettingsApp {
             current_tab: Tab::Hotkeys,
             update_status: None,
             startup_registered,
+            startup_error: None,
             dirty: false,
         }
     }
