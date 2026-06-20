@@ -65,6 +65,14 @@ fn run() -> Result<()> {
     let config_shared = Arc::new(Mutex::new(config.clone()));
     let state_shared = Arc::new(Mutex::new(AppState::default()));
 
+    // Sync initial state from the actual desktop. Windows persists desktop-icon
+    // visibility across reboots, so if we boot with icons already hidden the tray
+    // icon must reflect that instead of the default "visible" state.
+    {
+        let mut state = state_shared.lock().unwrap();
+        state.icons_hidden = !icons::are_icons_visible();
+    }
+
     let (cmd_tx, cmd_rx) = mpsc::channel::<Cmd>();
 
     // Ctrl+C / SIGTERM: restore the desktop before the process dies.
@@ -99,6 +107,13 @@ fn run() -> Result<()> {
         if let Err(e) = profiles::apply_profile(&config.defaults.profile, &cfg, &mut state) {
             eprintln!("Default profile error: {e}");
         }
+        // Refresh the tray so it reflects the profile we just applied.
+        tray::update_tray(&tray_handle, &state);
+    } else {
+        // No default profile, but the synced boot state may differ from the
+        // tray icon built from AppState::default(); refresh to match.
+        let state = state_shared.lock().unwrap();
+        tray::update_tray(&tray_handle, &state);
     }
 
     // Schedule first update check.
