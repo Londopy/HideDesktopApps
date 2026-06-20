@@ -184,6 +184,12 @@ fn make_icon(state: &AppState) -> Result<Icon> {
 
 // build the hover tooltip text
 fn build_tooltip(state: &AppState) -> String {
+    // Easter egg: icons, taskbar AND windows all gone — the desktop has fully
+    // vanished, so reward the curious with ninja mode instead of a dry list.
+    if state.icons_hidden && state.taskbar_hidden && state.windows_hidden {
+        return "HideDesktopApps — 🥷 Ninja mode: poof, your desktop vanished".to_string();
+    }
+
     let mut parts = Vec::new();
     if state.icons_hidden {
         parts.push("Icons: hidden");
@@ -198,6 +204,42 @@ fn build_tooltip(state: &AppState) -> String {
         "HideDesktopApps — all visible".to_string()
     } else {
         format!("HideDesktopApps — {}", parts.join(", "))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::AppState;
+
+    #[test]
+    fn tooltip_all_hidden_triggers_ninja_easter_egg() {
+        let state = AppState {
+            icons_hidden: true,
+            taskbar_hidden: true,
+            windows_hidden: true,
+            ..Default::default()
+        };
+        assert!(build_tooltip(&state).contains("Ninja mode"));
+    }
+
+    #[test]
+    fn tooltip_partial_hidden_is_normal() {
+        let state = AppState {
+            icons_hidden: true,
+            taskbar_hidden: true,
+            windows_hidden: false,
+            ..Default::default()
+        };
+        let tip = build_tooltip(&state);
+        assert!(!tip.contains("Ninja"));
+        assert!(tip.contains("Icons: hidden"));
+        assert!(tip.contains("Taskbar: hidden"));
+    }
+
+    #[test]
+    fn tooltip_nothing_hidden_says_all_visible() {
+        assert!(build_tooltip(&AppState::default()).contains("all visible"));
     }
 }
 

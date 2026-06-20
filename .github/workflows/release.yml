@@ -81,28 +81,6 @@ jobs:
           path: exe/${{ matrix.label }}/HideDesktopApps.exe
           retention-days: 1
 
-      # x64 also ships as a bare portable ZIP so Scoop/WinGet CLI installs keep working.
-      - name: Create x64 bare portable ZIP + SHA-256
-        if: matrix.label == 'x64'
-        shell: pwsh
-        run: |
-          $ver = "${{ github.ref_name }}"
-          $exe = "target\${{ matrix.target }}\release\HideDesktopApps.exe"
-          $zip = "HideDesktopApps-$ver-x64-portable.zip"
-          Compress-Archive -Path $exe -DestinationPath $zip
-          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  $zip" | Set-Content "$zip.sha256"
-
-      - name: Upload x64 bare portable artifact
-        if: matrix.label == 'x64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: portable-x64
-          path: |
-            HideDesktopApps-*-x64-portable.zip
-            HideDesktopApps-*-x64-portable.zip.sha256
-          retention-days: 1
-
   # ── Installers (one per arch, needs Inno Setup) ──────────────────────────────
   installer:
     name: Build installer (${{ matrix.label }})
@@ -212,13 +190,15 @@ jobs:
         shell: bash
         run: |
           VER="${{ github.ref_name }}"
-          DIR="HideDesktopApps-$VER-portable"
-          mkdir -p "$DIR/x64" "$DIR/x86" "$DIR/arm64"
-          cp stage/x64/HideDesktopApps.exe   "$DIR/x64/"
-          cp stage/x86/HideDesktopApps.exe   "$DIR/x86/"
-          cp stage/arm64/HideDesktopApps.exe "$DIR/arm64/"
-          ZIP="$DIR.zip"
-          zip -r "$ZIP" "$DIR"
+          # Stable internal folder name (no version) so Scoop's extract_dir is
+          # constant across releases. The ZIP file itself stays versioned.
+          ROOT="HideDesktopApps"
+          mkdir -p "$ROOT/x64" "$ROOT/x86" "$ROOT/arm64"
+          cp stage/x64/HideDesktopApps.exe   "$ROOT/x64/"
+          cp stage/x86/HideDesktopApps.exe   "$ROOT/x86/"
+          cp stage/arm64/HideDesktopApps.exe "$ROOT/arm64/"
+          ZIP="HideDesktopApps-$VER-portable.zip"
+          zip -r "$ZIP" "$ROOT"
           sha256sum "$ZIP" > "$ZIP.sha256"
 
       - name: Upload combined portable artifact
@@ -285,9 +265,9 @@ jobs:
             ```
 
             **Portable**
-            `HideDesktopApps-${{ github.ref_name }}-portable.zip` extracts to a folder with
-            `x64/`, `x86/`, and `arm64/` subfolders — open the one for your PC and run
-            `HideDesktopApps.exe`. (A bare `…-x64-portable.zip` is also provided for Scoop.)
+            `HideDesktopApps-${{ github.ref_name }}-portable.zip` extracts to a `HideDesktopApps`
+            folder with `x64/`, `x86/`, and `arm64/` subfolders — open the one for your PC and
+            run `HideDesktopApps.exe`.
 
             ---
             SHA-256 checksums for all downloads are in `SHA256SUMS.txt`.
@@ -310,10 +290,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download x64 portable checksum
+      - name: Download combined portable checksum
         uses: actions/download-artifact@v4
         with:
-          name: portable-x64
+          name: portable-combined
           path: dist
 
       - name: Patch manifest hash + version
@@ -321,11 +301,14 @@ jobs:
         run: |
           VER="${{ github.ref_name }}"
           VER="${VER#v}"
-          SHA=$(cut -d' ' -f1 dist/*x64-portable.zip.sha256)
+          SHA=$(cut -d' ' -f1 dist/*-portable.zip.sha256)
+          URL="https://github.com/Londopy/HideDesktopApps/releases/download/v$VER/HideDesktopApps-v$VER-portable.zip"
 
-          # Update version and hash in the manifest
+          # Update version, hash, and the concrete top-level url. The url sed skips
+          # any line containing '$version' so the autoupdate template stays intact.
           sed -i "s/\"version\": \".*\"/\"version\": \"$VER\"/" scoop/HideDesktopApps.json
           sed -i "s/\"hash\": \".*\"/\"hash\": \"$SHA\"/" scoop/HideDesktopApps.json
+          sed -i "/\$version/! s|\"url\": \".*\"|\"url\": \"$URL\"|" scoop/HideDesktopApps.json
 
       - name: Push updated manifest
         shell: bash

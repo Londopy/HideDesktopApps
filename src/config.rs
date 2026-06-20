@@ -210,14 +210,12 @@ pub fn config_path() -> Result<PathBuf> {
     Ok(config_dir()?.join("config.toml"))
 }
 
-// migrates old config.ini from the python version of the app
-fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppConfig> {
-    let content = std::fs::read_to_string(ini_path)?;
+// Pure parser for the old python config.ini: turns its text into an AppConfig
+// plus a flag for whether icons were set to start hidden. No file I/O so it can
+// be unit-tested. `migrate_ini` wraps this with logging and cleanup.
+fn parse_ini(content: &str) -> (AppConfig, bool) {
     let mut config = AppConfig::default();
     let mut icons_hidden_on_start = false;
-    let mut log_lines: Vec<String> = Vec::new();
-
-    log_lines.push("Migration from config.ini".to_string());
 
     for line in content.lines() {
         let line = line.trim();
@@ -236,26 +234,15 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
                 .trim_start_matches("hotkeys.");
             let value = value.trim();
             match key {
-                "hotkey_icons" | "icons" => {
-                    config.hotkeys.icons = value.to_string();
-                    log_lines.push(format!("  icons hotkey: {value}"));
-                }
-                "hotkey_taskbar" | "taskbar" => {
-                    config.hotkeys.taskbar = value.to_string();
-                    log_lines.push(format!("  taskbar hotkey: {value}"));
-                }
-                "hotkey_windows" | "windows" => {
-                    config.hotkeys.windows = value.to_string();
-                    log_lines.push(format!("  windows hotkey: {value}"));
-                }
+                "hotkey_icons" | "icons" => config.hotkeys.icons = value.to_string(),
+                "hotkey_taskbar" | "taskbar" => config.hotkeys.taskbar = value.to_string(),
+                "hotkey_windows" | "windows" => config.hotkeys.windows = value.to_string(),
                 "startup_enabled" | "run_on_startup" => {
                     config.startup.enabled = value.eq_ignore_ascii_case("true") || value == "1";
-                    log_lines.push(format!("  startup: {}", config.startup.enabled));
                 }
                 "startup_delay" | "startup_delay_s" => {
                     if let Ok(d) = value.parse::<u32>() {
                         config.startup.delay_s = d;
-                        log_lines.push(format!("  startup delay: {d}s"));
                     }
                 }
                 "updater_enabled" | "auto_update" => {
@@ -272,6 +259,21 @@ fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppC
             }
         }
     }
+
+    (config, icons_hidden_on_start)
+}
+
+// migrates old config.ini from the python version of the app
+fn migrate_ini(ini_path: &std::path::Path, dir: &std::path::Path) -> Result<AppConfig> {
+    let content = std::fs::read_to_string(ini_path)?;
+    let (mut config, icons_hidden_on_start) = parse_ini(&content);
+
+    let mut log_lines: Vec<String> = vec!["Migration from config.ini".to_string()];
+    log_lines.push(format!("  icons hotkey: {}", config.hotkeys.icons));
+    log_lines.push(format!("  taskbar hotkey: {}", config.hotkeys.taskbar));
+    log_lines.push(format!("  windows hotkey: {}", config.hotkeys.windows));
+    log_lines.push(format!("  startup: {}", config.startup.enabled));
+    log_lines.push(format!("  startup delay: {}s", config.startup.delay_s));
 
     // if it was set to start with icons hidden, create a profile for that
     if icons_hidden_on_start {
@@ -344,4 +346,91 @@ pub fn save_config(config: &AppConfig) -> Result<()> {
     std::fs::write(&path, content)
         .with_context(|| format!("Writing config to {}", path.display()))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_roundtrips_through_toml() {
+        let cfg = AppConfig::default();
+        let text = toml::to_string_pretty(&cfg).expect("serialize");
+        let back: AppConfig = toml::from_str(&text).expect("deserialize");
+        assert_eq!(back.hotkeys.icons, cfg.hotkeys.icons);
+        assert_eq!(back.updater.channel, cfg.updater.channel);
+        assert_eq!(back.profiles.len(), cfg.profiles.len());
+        assert_eq!(back.window_filter.exclude_processes, cfg.window_filter.exclude_processes);
+    }
+
+    #[test]
+    fn toml_without_profiles_section_defaults_to_empty() {
+        // `profiles` is the only #[serde(default)] field; omitting it must not error.
+        let text = "\
+[hotkeys]
+icons = \"ctrl+alt+h\"
+taskbar = \"ctrl+alt+t\"
+windows = \"ctrl+alt+w\"
+
+[startup]
+enabled = true
+delay_s = 30
+
+[defaults]
+profile = \"\"
+
+[updater]
+enabled = true
+channel = \"stable\"
+check_interval_h = 24
+last_checked = \"\"
+
+[notifications]
+enabled = true
+on_update = true
+on_hotkey_fail = true
+on_profile_switch = false
+
+[discord]
+enabled = true
+
+[window_filter]
+exclude_processes = []
+";
+        let back: AppConfig = toml::from_str(text).expect("deserialize without profiles");
+        assert!(back.profiles.is_empty());
+    }
+
+    #[test]
+    fn parse_ini_reads_hotkeys_and_flags() {
+        let ini = "\
+[Settings]
+hotkey_icons = ctrl+alt+x
+run_on_startup = false
+startup_delay = 12
+auto_update = 0
+[Hotkeys]
+taskbar = ctrl+alt+b
+";
+        let (cfg, icons_hidden) = parse_ini(ini);
+        assert_eq!(cfg.hotkeys.icons, "ctrl+alt+x");
+        assert_eq!(cfg.hotkeys.taskbar, "ctrl+alt+b");
+        assert!(!cfg.startup.enabled);
+        assert_eq!(cfg.startup.delay_s, 12);
+        assert!(!cfg.updater.enabled);
+        assert!(!icons_hidden);
+    }
+
+    #[test]
+    fn parse_ini_icons_hidden_sets_flag() {
+        let (_, icons_hidden) = parse_ini("icons_hidden = true\n");
+        assert!(icons_hidden);
+    }
+
+    #[test]
+    fn parse_ini_ignores_comments_and_blanks() {
+        let (cfg, _) = parse_ini("# comment\n; comment\n\n   \n");
+        // untouched -> defaults
+        assert_eq!(cfg.hotkeys.icons, HotkeysConfig::default().icons);
+    }
 }

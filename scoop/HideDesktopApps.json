@@ -1,23 +1,44 @@
 {
-    "version": "1.1.4-rc1",
+    "version": "1.1.4",
     "description": "System tray app to hide/show desktop icons, taskbar, and all windows via configurable hotkeys. Rust-native, single binary.",
     "homepage": "https://github.com/Londopy/HideDesktopApps",
     "license": "MIT",
-    "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v1.0.0/HideDesktopApps-v1.0.0-x64-portable.zip",
-    "hash": "6418ed0e729f51bed4634828209bae4f022d13de67d447b4418f23d0fa659a95",
-    "bin": "HideDesktopApps.exe",
-    "shortcuts": [
-        ["HideDesktopApps.exe", "HideDesktopApps"]
+    "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v1.1.4/HideDesktopApps-v1.1.4-portable.zip",
+    "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "extract_dir": "HideDesktopApps",
+    "architecture": {
+        "64bit": {
+            "bin": "x64\\HideDesktopApps.exe",
+            "shortcuts": [
+                ["x64\\HideDesktopApps.exe", "HideDesktopApps"]
+            ]
+        },
+        "32bit": {
+            "bin": "x86\\HideDesktopApps.exe",
+            "shortcuts": [
+                ["x86\\HideDesktopApps.exe", "HideDesktopApps"]
+            ]
+        },
+        "arm64": {
+            "bin": "arm64\\HideDesktopApps.exe",
+            "shortcuts": [
+                ["arm64\\HideDesktopApps.exe", "HideDesktopApps"]
+            ]
+        }
+    },
+    "persist": [
+        "x64\\config.toml",
+        "x86\\config.toml",
+        "arm64\\config.toml"
     ],
-    "persist": "config.toml",
-    "pre_install": "if (!(Test-Path \"$dir\\portable\")) { New-Item -ItemType File -Path \"$dir\\portable\" | Out-Null }",
+    "pre_install": "@('x64','x86','arm64') | ForEach-Object { $sub = Join-Path $dir $_; if (Test-Path $sub) { $marker = Join-Path $sub 'portable'; if (!(Test-Path $marker)) { New-Item -ItemType File -Path $marker | Out-Null } } }",
     "checkver": {
         "github": "https://github.com/Londopy/HideDesktopApps"
     },
     "autoupdate": {
-        "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-x64-portable.zip",
+        "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-portable.zip",
         "hash": {
-            "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-x64-portable.zip.sha256"
+            "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-portable.zip.sha256"
         }
     }
 }

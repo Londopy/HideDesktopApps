@@ -42,6 +42,7 @@ fn main() {
     // if we panic, try to restore icons/taskbar before crashing
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
+        dlog!("PANIC: {info}");
         eprintln!("PANIC: {info}");
         let _ = icons::show_icons();
         let _ = taskbar::show_taskbar();
@@ -51,6 +52,7 @@ fn main() {
     if let Err(e) = run() {
         let _ = icons::show_icons();
         let _ = taskbar::show_taskbar();
+        dlog!("Fatal error: {e:?}");
         eprintln!("Fatal error: {e:?}");
         std::process::exit(1);
     }
@@ -105,6 +107,7 @@ fn run() -> Result<()> {
         let mut state = state_shared.lock().unwrap();
         let cfg = config_shared.lock().unwrap().clone();
         if let Err(e) = profiles::apply_profile(&config.defaults.profile, &cfg, &mut state) {
+            dlog!("Default profile error: {e}");
             eprintln!("Default profile error: {e}");
         }
         // Refresh the tray so it reflects the profile we just applied.
@@ -337,7 +340,10 @@ fn main_loop(
                         Ok(()) => {
                             notifications::notify_profile_switch(&name, &cfg.notifications);
                         }
-                        Err(e) => eprintln!("apply_profile error: {e}"),
+                        Err(e) => {
+                            dlog!("apply_profile error: {e}");
+                            eprintln!("apply_profile error: {e}");
+                        }
                     }
                     tray::update_tray(&tray_handle, &state);
                     update_discord(&state, &config_shared.lock().unwrap());
@@ -388,6 +394,7 @@ fn main_loop(
                 Cmd::UpdateAvailable(version) => {
                     let cfg = config_shared.lock().unwrap().clone();
                     notifications::notify_update_available(&version, &cfg.notifications);
+                    dlog!("Update available: {version}");
                     eprintln!("Update available: {version}");
                 }
 
