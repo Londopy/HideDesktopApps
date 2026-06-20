@@ -67,45 +67,68 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Create portable ZIP + SHA-256
+      - name: Stage raw exe (for combined portable bundle)
         shell: pwsh
         run: |
-          $ver  = "${{ github.ref_name }}"
-          $lbl  = "${{ matrix.label }}"
-          $exe  = "target\${{ matrix.target }}\release\HideDesktopApps.exe"
-          $zip  = "HideDesktopApps-$ver-$lbl-portable.zip"
+          $lbl = "${{ matrix.label }}"
+          New-Item -ItemType Directory -Force -Path "exe\$lbl" | Out-Null
+          Copy-Item "target\${{ matrix.target }}\release\HideDesktopApps.exe" "exe\$lbl\HideDesktopApps.exe"
 
+      - name: Upload raw exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-${{ matrix.label }}
+          path: exe/${{ matrix.label }}/HideDesktopApps.exe
+          retention-days: 1
+
+      # x64 also ships as a bare portable ZIP so Scoop/WinGet CLI installs keep working.
+      - name: Create x64 bare portable ZIP + SHA-256
+        if: matrix.label == 'x64'
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}"
+          $exe = "target\${{ matrix.target }}\release\HideDesktopApps.exe"
+          $zip = "HideDesktopApps-$ver-x64-portable.zip"
           Compress-Archive -Path $exe -DestinationPath $zip
-
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           "$hash  $zip" | Set-Content "$zip.sha256"
 
-          echo "ZIP=$zip"        >> $env:GITHUB_ENV
-          echo "SHA256=$hash"    >> $env:GITHUB_ENV
-
-      - name: Upload build artifacts
+      - name: Upload x64 bare portable artifact
+        if: matrix.label == 'x64'
         uses: actions/upload-artifact@v4
         with:
-          name: portable-${{ matrix.label }}
+          name: portable-x64
           path: |
-            HideDesktopApps-*-${{ matrix.label }}-portable.zip
-            HideDesktopApps-*-${{ matrix.label }}-portable.zip.sha256
+            HideDesktopApps-*-x64-portable.zip
+            HideDesktopApps-*-x64-portable.zip.sha256
           retention-days: 1
 
-  # ── Installer (x64 only, needs Inno Setup) ───────────────────────────────────
+  # ── Installers (one per arch, needs Inno Setup) ──────────────────────────────
   installer:
-    name: Build installer (x64)
+    name: Build installer (${{ matrix.label }})
     runs-on: windows-latest
     needs: build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            label: x64
+          - target: i686-pc-windows-msvc
+            label: x86
+          - target: aarch64-pc-windows-msvc
+            label: arm64
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust stable
+      - name: Install Rust stable + target
         run: |
           rustup update stable
           rustup default stable
+          rustup target add ${{ matrix.target }}
 
       - name: Set version from tag
         shell: pwsh
@@ -128,12 +151,12 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-x64-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-x64-cargo-
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
 
-      - name: Build x64 binary
-        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
@@ -143,7 +166,7 @@ jobs:
         run: |
           $ver = "${{ github.ref_name }}".TrimStart("v")
           New-Item -ItemType Directory -Force -Path installer-output | Out-Null
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=$ver assets\installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=$ver /DArch=${{ matrix.label }} assets\installer.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
       - name: SHA-256 for installer
@@ -156,33 +179,83 @@ jobs:
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: installer-x64
+          name: installer-${{ matrix.label }}
           path: |
             installer-output\*.exe
             installer-output\*.sha256
+          retention-days: 1
+
+  # ── Combined portable folder ZIP (x64 + x86 + arm64) ─────────────────────────
+  portable:
+    name: Bundle combined portable ZIP
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download x64 exe
+        uses: actions/download-artifact@v4
+        with:
+          name: exe-x64
+          path: stage/x64
+      - name: Download x86 exe
+        uses: actions/download-artifact@v4
+        with:
+          name: exe-x86
+          path: stage/x86
+      - name: Download arm64 exe
+        uses: actions/download-artifact@v4
+        with:
+          name: exe-arm64
+          path: stage/arm64
+
+      - name: Assemble folder ZIP + SHA-256
+        shell: bash
+        run: |
+          VER="${{ github.ref_name }}"
+          DIR="HideDesktopApps-$VER-portable"
+          mkdir -p "$DIR/x64" "$DIR/x86" "$DIR/arm64"
+          cp stage/x64/HideDesktopApps.exe   "$DIR/x64/"
+          cp stage/x86/HideDesktopApps.exe   "$DIR/x86/"
+          cp stage/arm64/HideDesktopApps.exe "$DIR/arm64/"
+          ZIP="$DIR.zip"
+          zip -r "$ZIP" "$DIR"
+          sha256sum "$ZIP" > "$ZIP.sha256"
+
+      - name: Upload combined portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-combined
+          path: |
+            HideDesktopApps-*-portable.zip
+            HideDesktopApps-*-portable.zip.sha256
           retention-days: 1
 
   # ── Publish GitHub Release ───────────────────────────────────────────────────
   release:
     name: Publish release
     runs-on: windows-latest
-    needs: [build, installer]
+    needs: [build, installer, portable]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Each artifact lands in its own subfolder (artifacts/<name>/...).
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist
+          path: artifacts
 
       - name: Collect release files
         shell: pwsh
         run: |
-          # Flatten into dist/
-          Get-ChildItem dist -Recurse -File | Move-Item -Destination dist -Force
-          Remove-Item dist\* -Recurse -Include portable-*, installer-x64 -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          # Copy ONLY the installer + portable artifacts. The raw exe-* artifacts
+          # (all named HideDesktopApps.exe) are deliberately left out so they can't
+          # collide or leak into the release as stray assets.
+          Get-ChildItem artifacts -Directory |
+            Where-Object { $_.Name -like 'installer-*' -or $_.Name -like 'portable-*' } |
+            ForEach-Object { Get-ChildItem $_.FullName -File | Copy-Item -Destination dist -Force }
 
           # Consolidate all .sha256 sidecars into a single SHA256SUMS.txt
           $lines = Get-ChildItem dist\*.sha256 | Sort-Object Name | ForEach-Object { Get-Content $_.FullName }
@@ -197,7 +270,8 @@ jobs:
             ## Install
 
             **Installer (recommended)**
-            Download `HideDesktopApps-${{ github.ref_name }}-x64-setup.exe` and run it.
+            Download the setup for your architecture and run it:
+            `…-x64-setup.exe` (most PCs), `…-x86-setup.exe` (32-bit), or `…-arm64-setup.exe`.
 
             **Scoop**
             ```
@@ -210,8 +284,10 @@ jobs:
             winget install Londopy.HideDesktopApps
             ```
 
-            **Portable ZIP**
-            Download the ZIP for your architecture, extract, and run `HideDesktopApps.exe`.
+            **Portable**
+            `HideDesktopApps-${{ github.ref_name }}-portable.zip` extracts to a folder with
+            `x64/`, `x86/`, and `arm64/` subfolders — open the one for your PC and run
+            `HideDesktopApps.exe`. (A bare `…-x64-portable.zip` is also provided for Scoop.)
 
             ---
             SHA-256 checksums for all downloads are in `SHA256SUMS.txt`.

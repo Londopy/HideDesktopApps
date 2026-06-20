@@ -6,6 +6,28 @@
   #define AppVersion "1.0.0"
 #endif
 
+; Architecture to build for: x64 (default), x86, or arm64.
+; CI passes /DArch=x64|x86|arm64; each run produces one setup.
+#ifndef Arch
+  #define Arch "x64"
+#endif
+
+#if Arch == "x64"
+  #define TargetDir "x86_64-pc-windows-msvc"
+  #define ArchAllowed "x64compatible"
+  #define Arch64Mode "x64compatible"
+#elif Arch == "x86"
+  #define TargetDir "i686-pc-windows-msvc"
+  #define ArchAllowed ""
+  #define Arch64Mode ""
+#elif Arch == "arm64"
+  #define TargetDir "aarch64-pc-windows-msvc"
+  #define ArchAllowed "arm64"
+  #define Arch64Mode "arm64"
+#else
+  #error Unknown Arch (expected x64, x86, or arm64)
+#endif
+
 [Setup]
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 AppName=HideDesktopApps
@@ -20,13 +42,14 @@ DefaultGroupName=HideDesktopApps
 AllowNoIcons=yes
 ; Output goes to installer-output/ (created by CI)
 OutputDir=..\installer-output
-OutputBaseFilename=HideDesktopApps-v{#AppVersion}-x64-setup
+OutputBaseFilename=HideDesktopApps-v{#AppVersion}-{#Arch}-setup
 SetupIconFile=..\hide_desktop.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
-; x64 only for this script — separate scripts/runs for x86 and arm64
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+; Architecture controlled by the Arch define above (one setup per arch).
+; For x86 these are left empty so the 32-bit build installs on any Windows.
+ArchitecturesAllowed={#ArchAllowed}
+ArchitecturesInstallIn64BitMode={#Arch64Mode}
 WizardStyle=modern
 ; Don't require admin — install per-user so startup task works without UAC
 PrivilegesRequired=lowest
@@ -48,8 +71,8 @@ Name: "desktopicon"; \
   GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-; Main executable — built by cargo before running iscc
-Source: "..\target\x86_64-pc-windows-msvc\release\HideDesktopApps.exe"; \
+; Main executable — built by cargo before running iscc (target dir per arch)
+Source: "..\target\{#TargetDir}\release\HideDesktopApps.exe"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
 
