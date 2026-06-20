@@ -201,12 +201,14 @@ fn install_kind() -> InstallKind {
     if exe.contains("\\scoop\\") {
         return InstallKind::Scoop;
     }
-    // Inno Setup writes this uninstall key; WinGet uses the same installer.
-    use winreg::enums::HKEY_CURRENT_USER;
-    use winreg::RegKey;
-    let key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1";
-    if RegKey::predef(HKEY_CURRENT_USER).open_subkey(key).is_ok() {
-        return InstallKind::Installer;
+    // The Inno installer installs to %LOCALAPPDATA%\HideDesktopApps. Detect by the
+    // running exe's location (not a global registry key) so a portable or dev copy
+    // on a machine that merely ran the installer once still self-updates.
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        let install_dir = format!("{}\\hidedesktopapps\\", local.to_lowercase());
+        if exe.starts_with(&install_dir) {
+            return InstallKind::Installer;
+        }
     }
     InstallKind::Portable
 }
