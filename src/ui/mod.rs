@@ -65,9 +65,15 @@ pub enum HotkeyField {
 // a small colored "shown/hidden" chip for the status header
 fn status_chip(ui: &mut egui::Ui, name: &str, hidden: bool) {
     let (text, color) = if hidden {
-        (format!("{name}: hidden"), egui::Color32::from_rgb(231, 76, 60))
+        (
+            format!("{name}: hidden"),
+            egui::Color32::from_rgb(231, 76, 60),
+        )
     } else {
-        (format!("{name}: shown"), egui::Color32::from_rgb(46, 204, 113))
+        (
+            format!("{name}: shown"),
+            egui::Color32::from_rgb(46, 204, 113),
+        )
     };
     ui.colored_label(color, text);
 }
@@ -249,7 +255,11 @@ pub fn open_settings(
             Box::new(move |cc| {
                 // save the context so open_settings can wake us up later
                 *SETTINGS_CTX.lock().unwrap() = Some(cc.egui_ctx.clone());
-                Ok(Box::new(SettingsApp::new(config_shared, state_shared, cmd_tx)))
+                Ok(Box::new(SettingsApp::new(
+                    config_shared,
+                    state_shared,
+                    cmd_tx,
+                )))
             }),
         );
 

@@ -95,7 +95,13 @@ fn egui_key_token(key: egui::Key) -> Option<&'static str> {
 // look for a "modifier(s)+key" press in this frame's events
 fn capture_combo(input: &egui::InputState) -> Option<String> {
     for ev in &input.events {
-        if let egui::Event::Key { key, pressed: true, modifiers, .. } = ev {
+        if let egui::Event::Key {
+            key,
+            pressed: true,
+            modifiers,
+            ..
+        } = ev
+        {
             if let Some(tok) = egui_key_token(*key) {
                 let mut parts: Vec<&str> = Vec::new();
                 if modifiers.ctrl {
