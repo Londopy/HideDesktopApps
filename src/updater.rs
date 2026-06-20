@@ -99,11 +99,22 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
     let suffix = arch_suffix();
     let client = build_client()?;
 
-    // find the zip for our arch
+    // Find the zip for our arch. Prefer an arch-specific bare zip
+    // (e.g. "...-x64-portable.zip"); otherwise fall back to the combined
+    // portable zip ("...-portable.zip", no arch token), which holds
+    // x64/x86/arm64 subfolders we extract our arch's exe from below.
+    let arch_zip = format!("-{}-portable", suffix);
+    let is_combined = |name: &str| {
+        name.ends_with("-portable.zip")
+            && !["x64", "x86", "arm64"]
+                .iter()
+                .any(|s| name.contains(&format!("-{}-portable", s)))
+    };
     let zip_asset = release
         .assets
         .iter()
-        .find(|a| a.name.contains(suffix) && a.name.ends_with(".zip"))
+        .find(|a| a.name.ends_with(".zip") && a.name.contains(&arch_zip))
+        .or_else(|| release.assets.iter().find(|a| is_combined(&a.name)))
         .ok_or_else(|| anyhow::anyhow!("No zip asset found for arch '{}'", suffix))?;
 
     // find the matching sha256 file if there is one
@@ -160,19 +171,35 @@ pub fn download_and_apply(channel: &str) -> Result<()> {
     let zip_file = std::fs::File::open(&zip_path).context("Opening zip")?;
     let mut archive = zip::ZipArchive::new(zip_file).context("Parsing zip")?;
 
-    let mut found = false;
+    // Pick the exe to install. The combined zip stores each arch under its own
+    // subfolder (".../x64/HideDesktopApps.exe"), so prefer the entry under our
+    // arch's folder; fall back to any .exe for a flat single-arch zip.
+    let arch_dir = format!("/{}/", suffix);
+    let arch_prefix = format!("{}/", suffix);
+    let mut target_idx: Option<usize> = None;
+    let mut any_exe_idx: Option<usize> = None;
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i).context("Reading zip entry")?;
-        if file.name().ends_with(".exe") {
-            let mut out = std::fs::File::create(&new_exe_path).context("Creating new exe")?;
-            std::io::copy(&mut file, &mut out).context("Extracting exe")?;
-            found = true;
-            break;
+        let file = archive.by_index(i).context("Reading zip entry")?;
+        let name = file.name().replace('\\', "/");
+        if name.ends_with(".exe") {
+            if any_exe_idx.is_none() {
+                any_exe_idx = Some(i);
+            }
+            if name.contains(&arch_dir) || name.starts_with(&arch_prefix) {
+                target_idx = Some(i);
+                break;
+            }
         }
     }
 
-    if !found {
-        bail!("No .exe found inside update zip");
+    let idx = target_idx
+        .or(any_exe_idx)
+        .ok_or_else(|| anyhow::anyhow!("No .exe found inside update zip"))?;
+
+    {
+        let mut file = archive.by_index(idx).context("Reading zip entry")?;
+        let mut out = std::fs::File::create(&new_exe_path).context("Creating new exe")?;
+        std::io::copy(&mut file, &mut out).context("Extracting exe")?;
     }
 
     // replace the running exe and restart
