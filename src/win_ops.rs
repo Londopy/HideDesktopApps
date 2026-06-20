@@ -1,6 +1,6 @@
 use crate::state::HiddenWindow;
-use std::path::PathBuf;
 use anyhow::Result;
+use std::path::PathBuf;
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, TRUE};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
@@ -206,14 +206,15 @@ pub fn current_exe_path() -> String {
     String::from_utf16_lossy(&buf[..end])
 }
 
-
 // ── Crash recovery for hidden app windows ────────────────────────────────────
 // When windows are hidden we record their handles to a small file. A clean
 // restore deletes it; a crash leaves it, so the next launch (and the panic
 // hook) can re-show anything that was stranded.
 
 fn recovery_path() -> Option<PathBuf> {
-    crate::config::config_dir().ok().map(|d| d.join("hidden_windows.json"))
+    crate::config::config_dir()
+        .ok()
+        .map(|d| d.join("hidden_windows.json"))
 }
 
 // Save (or, when empty, delete) the recovery record of hidden windows.

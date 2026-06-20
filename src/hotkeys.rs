@@ -195,7 +195,6 @@ pub fn poll_hotkey_event() -> Option<GlobalHotKeyEvent> {
     GlobalHotKeyEvent::receiver().try_recv().ok()
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
