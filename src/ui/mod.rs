@@ -164,7 +164,7 @@ impl SettingsApp {
             let mut shared = self.config_shared.lock().unwrap();
             *shared = self.config.clone();
         }
-        let _ = self.cmd_tx.send(Cmd::ConfigUpdated(self.config.clone()));
+        let _ = self.cmd_tx.send(Cmd::ConfigUpdated(Box::new(self.config.clone())));
     }
 }
 

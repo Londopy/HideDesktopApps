@@ -30,7 +30,7 @@ pub enum Cmd {
     ToggleWindows,
     ShowEverything,
     ApplyProfile(String),
-    ConfigUpdated(AppConfig),
+    ConfigUpdated(Box<AppConfig>),
     OpenSettings,
     Restart,
     Exit,
@@ -411,6 +411,7 @@ fn main_loop(
                 }
 
                 Cmd::ConfigUpdated(new_cfg) => {
+                    let new_cfg = *new_cfg;
                     {
                         let mut shared = config_shared.lock().unwrap();
                         *shared = new_cfg.clone();
