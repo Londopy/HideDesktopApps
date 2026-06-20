@@ -207,42 +207,6 @@ fn build_tooltip(state: &AppState) -> String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::state::AppState;
-
-    #[test]
-    fn tooltip_all_hidden_triggers_ninja_easter_egg() {
-        let state = AppState {
-            icons_hidden: true,
-            taskbar_hidden: true,
-            windows_hidden: true,
-            ..Default::default()
-        };
-        assert!(build_tooltip(&state).contains("Ninja mode"));
-    }
-
-    #[test]
-    fn tooltip_partial_hidden_is_normal() {
-        let state = AppState {
-            icons_hidden: true,
-            taskbar_hidden: true,
-            windows_hidden: false,
-            ..Default::default()
-        };
-        let tip = build_tooltip(&state);
-        assert!(!tip.contains("Ninja"));
-        assert!(tip.contains("Icons: hidden"));
-        assert!(tip.contains("Taskbar: hidden"));
-    }
-
-    #[test]
-    fn tooltip_nothing_hidden_says_all_visible() {
-        assert!(build_tooltip(&AppState::default()).contains("all visible"));
-    }
-}
-
 pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHandle> {
     let toggle_icons_item = MenuItem::new("Toggle Desktop Icons\tCtrl+Alt+H", true, None);
     let toggle_taskbar_item = MenuItem::new("Toggle Taskbar\tCtrl+Alt+T", true, None);
@@ -319,4 +283,40 @@ pub fn poll_menu_event() -> Option<MenuEvent> {
 // check for tray icon clicks (non-blocking)
 pub fn poll_tray_event() -> Option<TrayIconEvent> {
     TrayIconEvent::receiver().try_recv().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::AppState;
+
+    #[test]
+    fn tooltip_all_hidden_triggers_ninja_easter_egg() {
+        let state = AppState {
+            icons_hidden: true,
+            taskbar_hidden: true,
+            windows_hidden: true,
+            ..Default::default()
+        };
+        assert!(build_tooltip(&state).contains("Ninja mode"));
+    }
+
+    #[test]
+    fn tooltip_partial_hidden_is_normal() {
+        let state = AppState {
+            icons_hidden: true,
+            taskbar_hidden: true,
+            windows_hidden: false,
+            ..Default::default()
+        };
+        let tip = build_tooltip(&state);
+        assert!(!tip.contains("Ninja"));
+        assert!(tip.contains("Icons: hidden"));
+        assert!(tip.contains("Taskbar: hidden"));
+    }
+
+    #[test]
+    fn tooltip_nothing_hidden_says_all_visible() {
+        assert!(build_tooltip(&AppState::default()).contains("all visible"));
+    }
 }

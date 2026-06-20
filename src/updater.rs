@@ -150,10 +150,7 @@ fn hash_from_sums(sums: &str, filename: &str) -> Option<String> {
         };
         // sha256sum may prefix the name with '*'; also tolerate path components.
         let name = parts.next().unwrap_or("").trim_start_matches('*');
-        let base = name
-            .rsplit(|c| c == '/' || c == '\\')
-            .next()
-            .unwrap_or(name);
+        let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
         if base == filename {
             return Some(hash.to_lowercase());
         }
