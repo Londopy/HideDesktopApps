@@ -257,3 +257,46 @@ pub fn recover_hidden_windows() -> usize {
     let _ = std::fs::remove_file(&path);
     count
 }
+
+// ── Single-instance guard ────────────────────────────────────────────────────
+// A named mutex shared across processes. The first instance owns it; later
+// launches see it already exists and bail, so we never run two trays at once.
+
+pub struct InstanceGuard(windows::Win32::Foundation::HANDLE);
+
+impl Drop for InstanceGuard {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = windows::Win32::Foundation::CloseHandle(self.0);
+        }
+    }
+}
+
+// Returns Some(guard) if this is the only instance, or None if another already
+// holds the mutex. When `wait_for_release` is true (a restart relaunch), retry
+// briefly so the old process has time to exit and release it.
+pub fn acquire_single_instance(wait_for_release: bool) -> Option<InstanceGuard> {
+    use windows::core::w;
+    use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS};
+    use windows::Win32::System::Threading::CreateMutexW;
+
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    loop {
+        unsafe {
+            match CreateMutexW(None, true, w!("HideDesktopApps_SingleInstance_Mutex")) {
+                Ok(handle) => {
+                    if GetLastError() != ERROR_ALREADY_EXISTS {
+                        return Some(InstanceGuard(handle));
+                    }
+                    // Another instance owns it; release our handle to the existing one.
+                    let _ = CloseHandle(handle);
+                }
+                Err(_) => return None,
+            }
+        }
+        if !wait_for_release || std::time::Instant::now() >= deadline {
+            return None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(150));
+    }
+}

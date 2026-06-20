@@ -54,6 +54,24 @@ impl Tab {
     }
 }
 
+// which hotkey field the recorder is currently capturing
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HotkeyField {
+    Icons,
+    Taskbar,
+    Windows,
+}
+
+// a small colored "shown/hidden" chip for the status header
+fn status_chip(ui: &mut egui::Ui, name: &str, hidden: bool) {
+    let (text, color) = if hidden {
+        (format!("{name}: hidden"), egui::Color32::from_rgb(231, 76, 60))
+    } else {
+        (format!("{name}: shown"), egui::Color32::from_rgb(46, 204, 113))
+    };
+    ui.colored_label(color, text);
+}
+
 pub struct SettingsApp {
     pub config: AppConfig,
     pub config_shared: Arc<Mutex<AppConfig>>,
@@ -66,10 +84,18 @@ pub struct SettingsApp {
     pub startup_error: Option<String>,
     /// Set to true by any tab that modifies config; triggers a save at end of frame.
     pub dirty: bool,
+    /// Live app state, for the status header.
+    pub state_shared: Arc<Mutex<crate::state::AppState>>,
+    /// Which hotkey field (if any) is currently being recorded.
+    pub recording_hotkey: Option<HotkeyField>,
 }
 
 impl SettingsApp {
-    pub fn new(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<Cmd>) -> Self {
+    pub fn new(
+        config_shared: Arc<Mutex<AppConfig>>,
+        state_shared: Arc<Mutex<crate::state::AppState>>,
+        cmd_tx: mpsc::Sender<Cmd>,
+    ) -> Self {
         let config = config_shared.lock().unwrap().clone();
         let startup_registered = crate::startup::is_registered();
         Self {
@@ -82,6 +108,8 @@ impl SettingsApp {
             startup_registered,
             startup_error: None,
             dirty: false,
+            state_shared,
+            recording_hotkey: None,
         }
     }
 
@@ -115,7 +143,26 @@ impl eframe::App for SettingsApp {
             return;
         }
 
+        // keep the live status header fresh while the window is open
+        ctx.request_repaint_after(std::time::Duration::from_millis(500));
+
         egui::CentralPanel::default().show(ctx, |ui| {
+            // live status of what's currently hidden
+            {
+                let st = self.state_shared.lock().unwrap();
+                ui.horizontal(|ui| {
+                    ui.label("Status:");
+                    status_chip(ui, "Icons", st.icons_hidden);
+                    status_chip(ui, "Taskbar", st.taskbar_hidden);
+                    status_chip(ui, "Windows", st.windows_hidden);
+                    if let Some(p) = &st.active_profile {
+                        ui.separator();
+                        ui.label(format!("Profile: {p}"));
+                    }
+                });
+            }
+            ui.separator();
+
             ui.horizontal(|ui| {
                 for &tab in Tab::all() {
                     ui.selectable_value(&mut self.current_tab, tab, tab.label());
@@ -147,7 +194,11 @@ impl eframe::App for SettingsApp {
 }
 
 // open the settings window, or restore it if it's already running
-pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<Cmd>) {
+pub fn open_settings(
+    config_shared: Arc<Mutex<AppConfig>>,
+    state_shared: Arc<Mutex<crate::state::AppState>>,
+    cmd_tx: mpsc::Sender<Cmd>,
+) {
     // already running, just tell it to show itself
     let existing = SETTINGS_CTX.lock().unwrap().clone();
     if let Some(ctx) = existing {
@@ -198,7 +249,7 @@ pub fn open_settings(config_shared: Arc<Mutex<AppConfig>>, cmd_tx: mpsc::Sender<
             Box::new(move |cc| {
                 // save the context so open_settings can wake us up later
                 *SETTINGS_CTX.lock().unwrap() = Some(cc.egui_ctx.clone());
-                Ok(Box::new(SettingsApp::new(config_shared, cmd_tx)))
+                Ok(Box::new(SettingsApp::new(config_shared, state_shared, cmd_tx)))
             }),
         );
 

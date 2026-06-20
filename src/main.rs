@@ -39,6 +39,14 @@ pub enum Cmd {
 }
 
 fn main() {
+    // Single-instance guard: if another copy is already running, exit quietly.
+    // A restart relaunch passes --restarted so it waits for the old one to exit.
+    let restarted = std::env::args().any(|a| a == "--restarted");
+    let _instance = match win_ops::acquire_single_instance(restarted) {
+        Some(guard) => guard,
+        None => return,
+    };
+
     // if we panic, try to restore icons/taskbar before crashing
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
@@ -379,7 +387,11 @@ fn main_loop(
                 Cmd::OpenSettings => {
                     dlog!("Cmd::OpenSettings received");
                     // runs in a background thread, main loop keeps going
-                    ui::open_settings(Arc::clone(&config_shared), cmd_tx.clone());
+                    ui::open_settings(
+                        Arc::clone(&config_shared),
+                        Arc::clone(&state_shared),
+                        cmd_tx.clone(),
+                    );
                 }
 
                 Cmd::Restart => {
@@ -389,7 +401,7 @@ fn main_loop(
                     }
                     let exe = std::env::current_exe()
                         .unwrap_or_else(|_| std::path::PathBuf::from("HideDesktopApps.exe"));
-                    let _ = std::process::Command::new(exe).spawn();
+                    let _ = std::process::Command::new(exe).arg("--restarted").spawn();
                     return Ok(());
                 }
 
