@@ -6,6 +6,14 @@
   #define AppVersion "1.0.0"
 #endif
 
+; VersionInfoVersion must be plain numeric (x.x.x[.x]); strip any prerelease
+; suffix like "-rc1" so prerelease tags (e.g. v1.1.4-rc1) still compile.
+#if Pos("-", AppVersion) > 0
+  #define NumericVersion Copy(AppVersion, 1, Pos("-", AppVersion) - 1)
+#else
+  #define NumericVersion AppVersion
+#endif
+
 ; Architecture to build for: x64 (default), x86, or arm64.
 ; CI passes /DArch=x64|x86|arm64; each run produces one setup.
 #ifndef Arch
@@ -58,7 +66,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 MinVersion=10.0.18362
 UninstallDisplayIcon={app}\HideDesktopApps.exe
 UninstallDisplayName=HideDesktopApps
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#NumericVersion}
 VersionInfoDescription=HideDesktopApps
 VersionInfoCopyright=HideDesktopApps contributors
 
