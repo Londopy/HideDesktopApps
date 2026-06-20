@@ -300,3 +300,36 @@ pub fn acquire_single_instance(wait_for_release: bool) -> Option<InstanceGuard> 
         std::thread::sleep(std::time::Duration::from_millis(150));
     }
 }
+
+// True if the foreground window covers its whole monitor (a fullscreen app).
+pub fn foreground_is_fullscreen() -> bool {
+    use windows::Win32::Foundation::RECT;
+    use windows::Win32::Graphics::Gdi::{
+        GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    };
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.0.is_null() {
+            return false;
+        }
+        // ignore the desktop and shell windows
+        let class = get_class_name(hwnd);
+        if SHELL_CLASSES.iter().any(|&s| s == class) {
+            return false;
+        }
+        let mut wr = RECT::default();
+        if GetWindowRect(hwnd, &mut wr).is_err() {
+            return false;
+        }
+        let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        let mut mi = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        if !GetMonitorInfoW(monitor, &mut mi).as_bool() {
+            return false;
+        }
+        let m = mi.rcMonitor;
+        wr.left <= m.left && wr.top <= m.top && wr.right >= m.right && wr.bottom >= m.bottom
+    }
+}

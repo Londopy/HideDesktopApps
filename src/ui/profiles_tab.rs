@@ -1,4 +1,5 @@
-use super::SettingsApp;
+use super::hotkeys_tab::hotkey_editor_widget;
+use super::{HotkeyField, SettingsApp};
 use crate::config::ProfileConfig;
 use egui::Ui;
 
@@ -8,39 +9,59 @@ impl SettingsApp {
         ui.label("Define preset hide/show combinations activated by a hotkey.");
         ui.add_space(8.0);
 
-        let mut to_delete: Option<usize> = None;
+        // Esc cancels an in-progress hotkey recording.
+        if self.recording_hotkey.is_some() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.recording_hotkey = None;
+        }
 
-        for (i, profile) in self.config.profiles.iter_mut().enumerate() {
+        let mut to_delete: Option<usize> = None;
+        let count = self.config.profiles.len();
+        for i in 0..count {
             ui.group(|ui| {
                 ui.horizontal(|ui| {
                     ui.label("Name:");
-                    if ui.text_edit_singleline(&mut profile.name).changed() {
+                    let r = ui.text_edit_singleline(&mut self.config.profiles[i].name);
+                    if r.changed() {
                         self.dirty = true;
                     }
-                    if ui
-                        .add(egui::Button::new("Remove").fill(egui::Color32::DARK_RED))
-                        .clicked()
-                    {
+                    let remove = ui.add(egui::Button::new("Remove").fill(egui::Color32::DARK_RED));
+                    if remove.clicked() {
                         to_delete = Some(i);
                     }
                 });
 
+                // hotkey recorder (same widget as the Hotkeys tab)
+                let current = self.config.profiles[i].hotkey.clone();
+                let new_hk = hotkey_editor_widget(
+                    ui,
+                    &mut self.recording_hotkey,
+                    HotkeyField::Profile(i),
+                    "Hotkey",
+                    &current,
+                );
+                if new_hk != self.config.profiles[i].hotkey {
+                    self.config.profiles[i].hotkey = new_hk;
+                    self.dirty = true;
+                }
                 ui.horizontal(|ui| {
-                    ui.label("Hotkey:");
-                    if ui.text_edit_singleline(&mut profile.hotkey).changed() {
+                    if ui.button("Clear hotkey").clicked() {
+                        self.config.profiles[i].hotkey.clear();
                         self.dirty = true;
                     }
-                    ui.label("(empty = none, e.g. ctrl+alt+1)");
+                    ui.label("(empty = no hotkey)");
                 });
 
                 ui.horizontal(|ui| {
-                    if ui.checkbox(&mut profile.icons, "Hide Icons").changed() {
+                    let ric = ui.checkbox(&mut self.config.profiles[i].icons, "Hide Icons");
+                    if ric.changed() {
                         self.dirty = true;
                     }
-                    if ui.checkbox(&mut profile.taskbar, "Hide Taskbar").changed() {
+                    let rtb = ui.checkbox(&mut self.config.profiles[i].taskbar, "Hide Taskbar");
+                    if rtb.changed() {
                         self.dirty = true;
                     }
-                    if ui.checkbox(&mut profile.windows, "Hide Windows").changed() {
+                    let rwn = ui.checkbox(&mut self.config.profiles[i].windows, "Hide Windows");
+                    if rwn.changed() {
                         self.dirty = true;
                     }
                 });

@@ -28,6 +28,7 @@ pub enum Cmd {
     ToggleIcons,
     ToggleTaskbar,
     ToggleWindows,
+    ShowEverything,
     ApplyProfile(String),
     ConfigUpdated(AppConfig),
     OpenSettings,
@@ -173,6 +174,10 @@ fn main_loop(
     let mut last_taskbar_fire = epoch;
     let mut last_windows_fire = epoch;
 
+    // auto-hide-on-fullscreen tracking
+    let mut last_fullscreen_check = Instant::now();
+    let mut auto_hidden = false;
+
     loop {
         // pump win32 messages so tray and hotkeys work
         #[cfg(target_os = "windows")]
@@ -188,6 +193,36 @@ fn main_loop(
         }
 
         std::thread::sleep(Duration::from_millis(16));
+
+        // auto-hide icons + taskbar while a fullscreen app is focused (opt-in)
+        if last_fullscreen_check.elapsed() >= Duration::from_millis(1000) {
+            last_fullscreen_check = Instant::now();
+            let enabled = config_shared.lock().unwrap().behavior.auto_hide_fullscreen;
+            if enabled {
+                let fullscreen = win_ops::foreground_is_fullscreen();
+                if fullscreen && !auto_hidden {
+                    let mut state = state_shared.lock().unwrap();
+                    if !state.icons_hidden && !state.taskbar_hidden {
+                        let _ = icons::hide_icons();
+                        state.icons_hidden = true;
+                        let _ = taskbar::hide_taskbar();
+                        state.taskbar_hidden = true;
+                        auto_hidden = true;
+                        tray::update_tray(&tray_handle, &state);
+                    }
+                } else if !fullscreen && auto_hidden {
+                    let mut state = state_shared.lock().unwrap();
+                    let _ = icons::show_icons();
+                    state.icons_hidden = false;
+                    let _ = taskbar::show_taskbar();
+                    state.taskbar_hidden = false;
+                    auto_hidden = false;
+                    tray::update_tray(&tray_handle, &state);
+                }
+            } else if auto_hidden {
+                auto_hidden = false;
+            }
+        }
 
         // check hotkey events
         while let Some(event) = hotkeys::poll_hotkey_event() {
@@ -233,6 +268,8 @@ fn main_loop(
                 let _ = cmd_tx.send(Cmd::ToggleTaskbar);
             } else if id == &tray_handle.ids.toggle_windows {
                 let _ = cmd_tx.send(Cmd::ToggleWindows);
+            } else if id == &tray_handle.ids.show_everything {
+                let _ = cmd_tx.send(Cmd::ShowEverything);
             } else if id == &tray_handle.ids.settings {
                 let _ = cmd_tx.send(Cmd::OpenSettings);
             } else if id == &tray_handle.ids.restart {
@@ -345,6 +382,14 @@ fn main_loop(
                             }
                         }
                     }
+                    tray::update_tray(&tray_handle, &state);
+                    update_discord(&state, &config_shared.lock().unwrap());
+                }
+
+                Cmd::ShowEverything => {
+                    dlog!("Cmd::ShowEverything received");
+                    let mut state = state_shared.lock().unwrap();
+                    profiles::restore_all(&mut state);
                     tray::update_tray(&tray_handle, &state);
                     update_discord(&state, &config_shared.lock().unwrap());
                 }

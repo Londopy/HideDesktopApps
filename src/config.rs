@@ -12,7 +12,30 @@ pub struct AppConfig {
     pub discord: DiscordConfig,
     pub window_filter: WindowFilterConfig,
     #[serde(default)]
+    pub behavior: BehaviorConfig,
+    #[serde(default)]
     pub profiles: Vec<ProfileConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BehaviorConfig {
+    #[serde(default)]
+    pub auto_hide_fullscreen: bool,
+    #[serde(default = "default_theme")]
+    pub theme: String,
+}
+
+fn default_theme() -> String {
+    "Dark".to_string()
+}
+
+impl Default for BehaviorConfig {
+    fn default() -> Self {
+        Self {
+            auto_hide_fullscreen: false,
+            theme: default_theme(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,6 +173,7 @@ impl Default for AppConfig {
             notifications: NotificationsConfig::default(),
             discord: DiscordConfig::default(),
             window_filter: WindowFilterConfig::default(),
+            behavior: BehaviorConfig::default(),
             profiles: default_profiles(),
         }
     }

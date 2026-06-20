@@ -1,5 +1,6 @@
 mod about_tab;
 mod discord_tab;
+mod general_tab;
 mod hotkeys_tab;
 mod notifications_tab;
 mod profiles_tab;
@@ -25,6 +26,7 @@ pub enum Tab {
     Notifications,
     Updater,
     Discord,
+    General,
     About,
 }
 
@@ -37,6 +39,7 @@ impl Tab {
             Tab::Notifications,
             Tab::Updater,
             Tab::Discord,
+            Tab::General,
             Tab::About,
         ]
     }
@@ -49,6 +52,7 @@ impl Tab {
             Tab::Notifications => "Notifications",
             Tab::Updater => "Updater",
             Tab::Discord => "Discord",
+            Tab::General => "General",
             Tab::About => "About",
         }
     }
@@ -60,6 +64,7 @@ pub enum HotkeyField {
     Icons,
     Taskbar,
     Windows,
+    Profile(usize),
 }
 
 // a small colored "shown/hidden" chip for the status header
@@ -78,6 +83,34 @@ fn status_chip(ui: &mut egui::Ui, name: &str, hidden: bool) {
     ui.colored_label(color, text);
 }
 
+// available settings-window themes
+pub const THEMES: &[&str] = &["Dark", "Light", "Ocean", "Rose", "Forest"];
+
+// apply the chosen theme to the settings window's visuals
+fn apply_theme(ctx: &egui::Context, theme: &str) {
+    let mut v = if theme == "Light" {
+        egui::Visuals::light()
+    } else {
+        egui::Visuals::dark()
+    };
+    match theme {
+        "Ocean" => {
+            v.hyperlink_color = egui::Color32::from_rgb(0, 170, 255);
+            v.selection.bg_fill = egui::Color32::from_rgb(0, 90, 160);
+        }
+        "Rose" => {
+            v.hyperlink_color = egui::Color32::from_rgb(255, 110, 170);
+            v.selection.bg_fill = egui::Color32::from_rgb(150, 40, 90);
+        }
+        "Forest" => {
+            v.hyperlink_color = egui::Color32::from_rgb(120, 220, 120);
+            v.selection.bg_fill = egui::Color32::from_rgb(40, 120, 60);
+        }
+        _ => {}
+    }
+    ctx.set_visuals(v);
+}
+
 pub struct SettingsApp {
     pub config: AppConfig,
     pub config_shared: Arc<Mutex<AppConfig>>,
@@ -94,6 +127,8 @@ pub struct SettingsApp {
     pub state_shared: Arc<Mutex<crate::state::AppState>>,
     /// Which hotkey field (if any) is currently being recorded.
     pub recording_hotkey: Option<HotkeyField>,
+    /// Status line for settings import/export.
+    pub backup_status: Option<String>,
 }
 
 impl SettingsApp {
@@ -116,6 +151,7 @@ impl SettingsApp {
             dirty: false,
             state_shared,
             recording_hotkey: None,
+            backup_status: None,
         }
     }
 
@@ -134,6 +170,8 @@ impl SettingsApp {
 
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        apply_theme(ctx, &self.config.behavior.theme);
+
         // if the main thread wants us to show, restore and focus
         if SETTINGS_SHOW.swap(false, Ordering::SeqCst) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
@@ -183,6 +221,7 @@ impl eframe::App for SettingsApp {
                 Tab::Notifications => self.notifications_tab(ui),
                 Tab::Updater => self.updater_tab(ui),
                 Tab::Discord => self.discord_tab(ui),
+                Tab::General => self.general_tab(ui),
                 Tab::About => self.about_tab(ui),
             });
         });

@@ -11,6 +11,7 @@ pub struct TrayMenuIds {
     pub toggle_icons: tray_icon::menu::MenuId,
     pub toggle_taskbar: tray_icon::menu::MenuId,
     pub toggle_windows: tray_icon::menu::MenuId,
+    pub show_everything: tray_icon::menu::MenuId,
     pub settings: tray_icon::menu::MenuId,
     pub restart: tray_icon::menu::MenuId,
     pub exit: tray_icon::menu::MenuId,
@@ -211,6 +212,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     let toggle_icons_item = MenuItem::new("Toggle Desktop Icons\tCtrl+Alt+H", true, None);
     let toggle_taskbar_item = MenuItem::new("Toggle Taskbar\tCtrl+Alt+T", true, None);
     let toggle_windows_item = MenuItem::new("Toggle App Windows\tCtrl+Alt+W", true, None);
+    let show_everything_item = MenuItem::new("Show Everything", true, None);
     let settings_item = MenuItem::new("Settings...", true, None);
     let restart_item = MenuItem::new("Restart", true, None);
     let exit_item = MenuItem::new("Exit", true, None);
@@ -235,6 +237,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
         toggle_icons: toggle_icons_item.id().clone(),
         toggle_taskbar: toggle_taskbar_item.id().clone(),
         toggle_windows: toggle_windows_item.id().clone(),
+        show_everything: show_everything_item.id().clone(),
         settings: settings_item.id().clone(),
         restart: restart_item.id().clone(),
         exit: exit_item.id().clone(),
@@ -245,6 +248,7 @@ pub fn build_tray(state: &AppState, profiles: &[ProfileConfig]) -> Result<TrayHa
     menu.append(&toggle_icons_item)?;
     menu.append(&toggle_taskbar_item)?;
     menu.append(&toggle_windows_item)?;
+    menu.append(&show_everything_item)?;
     menu.append(&PredefinedMenuItem::separator())?;
     menu.append(&profiles_submenu)?;
     menu.append(&PredefinedMenuItem::separator())?;

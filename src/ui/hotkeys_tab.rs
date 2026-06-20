@@ -124,98 +124,114 @@ fn capture_combo(input: &egui::InputState) -> Option<String> {
     None
 }
 
-fn field_label(field: HotkeyField) -> &'static str {
-    match field {
-        HotkeyField::Icons => "Toggle Desktop Icons",
-        HotkeyField::Taskbar => "Toggle Taskbar",
-        HotkeyField::Windows => "Toggle App Windows",
+// Reusable hotkey editor: checkboxes + key, or a Record button that captures the
+// real keypress. `recording` tracks which field is mid-capture (shared state so
+// only one records at a time). Returns the (possibly unchanged) hotkey string.
+pub(crate) fn hotkey_editor_widget(
+    ui: &mut Ui,
+    recording: &mut Option<HotkeyField>,
+    field: HotkeyField,
+    label: &str,
+    current: &str,
+) -> String {
+    let (mut ctrl, mut alt, mut shift, mut win, mut key) = parse_for_edit(current);
+    let is_recording = *recording == Some(field);
+
+    let mut captured: Option<String> = None;
+    if is_recording {
+        ui.ctx().request_repaint();
+        if let Some(combo) = ui.input(capture_combo) {
+            captured = Some(combo);
+            *recording = None;
+        }
     }
+
+    let mut toggle_record = false;
+    ui.group(|ui| {
+        ui.horizontal(|ui| {
+            ui.label(label);
+            let btn = if is_recording {
+                "Press a combo\u{2026} (Esc to cancel)"
+            } else {
+                "\u{2328} Record"
+            };
+            if ui.button(btn).clicked() {
+                toggle_record = true;
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut ctrl, "Ctrl");
+            ui.checkbox(&mut alt, "Alt");
+            ui.checkbox(&mut shift, "Shift");
+            ui.checkbox(&mut win, "Win");
+        });
+        ui.horizontal(|ui| {
+            ui.label("Key:");
+            let mut key_input = key.clone();
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut key_input)
+                    .desired_width(40.0)
+                    .char_limit(1),
+            );
+            if response.changed() {
+                key = key_input
+                    .chars()
+                    .filter(|c| c.is_ascii_alphabetic())
+                    .map(|c| c.to_ascii_uppercase())
+                    .collect();
+            }
+            let preview = build_hotkey(ctrl, alt, shift, win, &key.to_lowercase());
+            ui.label(format!("\u{2192} {}", preview));
+        });
+    });
+
+    if toggle_record {
+        *recording = if is_recording { None } else { Some(field) };
+    }
+
+    if let Some(combo) = captured {
+        return combo;
+    }
+    build_hotkey(ctrl, alt, shift, win, &key.to_lowercase())
 }
 
 impl SettingsApp {
-    // a hotkey editor (checkboxes + key, or a Record button) for one action
-    fn hotkey_editor(&mut self, ui: &mut Ui, field: HotkeyField, current: &str) -> String {
-        let (mut ctrl, mut alt, mut shift, mut win, mut key) = parse_for_edit(current);
-        let recording = self.recording_hotkey == Some(field);
-
-        // if recording this field, try to capture a combo from this frame's input
-        let mut captured: Option<String> = None;
-        if recording {
-            ui.ctx().request_repaint();
-            if let Some(combo) = ui.input(capture_combo) {
-                captured = Some(combo);
-                self.recording_hotkey = None;
-            }
-        }
-
-        let mut toggle_record = false;
-        ui.group(|ui| {
-            ui.horizontal(|ui| {
-                ui.label(field_label(field));
-                let btn = if recording {
-                    "Press a combo\u{2026} (Esc to cancel)"
-                } else {
-                    "\u{2328} Record"
-                };
-                if ui.button(btn).clicked() {
-                    toggle_record = true;
-                }
-            });
-            ui.horizontal(|ui| {
-                ui.checkbox(&mut ctrl, "Ctrl");
-                ui.checkbox(&mut alt, "Alt");
-                ui.checkbox(&mut shift, "Shift");
-                ui.checkbox(&mut win, "Win");
-            });
-            ui.horizontal(|ui| {
-                ui.label("Key:");
-                let mut key_input = key.clone();
-                let response = ui.add(
-                    egui::TextEdit::singleline(&mut key_input)
-                        .desired_width(40.0)
-                        .char_limit(1),
-                );
-                if response.changed() {
-                    key = key_input
-                        .chars()
-                        .filter(|c| c.is_ascii_alphabetic())
-                        .map(|c| c.to_ascii_uppercase())
-                        .collect();
-                }
-                let preview = build_hotkey(ctrl, alt, shift, win, &key.to_lowercase());
-                ui.label(format!("\u{2192} {}", preview));
-            });
-        });
-
-        if toggle_record {
-            self.recording_hotkey = if recording { None } else { Some(field) };
-        }
-
-        if let Some(combo) = captured {
-            return combo;
-        }
-        build_hotkey(ctrl, alt, shift, win, &key.to_lowercase())
-    }
-
     pub fn hotkeys_tab(&mut self, ui: &mut Ui) {
         ui.heading("Global Hotkeys");
         ui.label("Click Record and press your combo, or use the checkboxes + key.");
         ui.weak("Defaults \u{2014} Icons: Ctrl+Alt+H, Taskbar: Ctrl+Alt+T, Windows: Ctrl+Alt+W");
         ui.add_space(8.0);
 
-        // Esc cancels an in-progress recording
         if self.recording_hotkey.is_some() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.recording_hotkey = None;
         }
 
         let icons = self.config.hotkeys.icons.clone();
-        let new_icons = self.hotkey_editor(ui, HotkeyField::Icons, &icons);
+        let new_icons = hotkey_editor_widget(
+            ui,
+            &mut self.recording_hotkey,
+            HotkeyField::Icons,
+            "Toggle Desktop Icons",
+            &icons,
+        );
         ui.add_space(4.0);
         let taskbar = self.config.hotkeys.taskbar.clone();
-        let new_taskbar = self.hotkey_editor(ui, HotkeyField::Taskbar, &taskbar);
+        let new_taskbar = hotkey_editor_widget(
+            ui,
+            &mut self.recording_hotkey,
+            HotkeyField::Taskbar,
+            "Toggle Taskbar",
+            &taskbar,
+        );
         ui.add_space(4.0);
         let windows = self.config.hotkeys.windows.clone();
-        let new_windows = self.hotkey_editor(ui, HotkeyField::Windows, &windows);
+        let new_windows = hotkey_editor_widget(
+            ui,
+            &mut self.recording_hotkey,
+            HotkeyField::Windows,
+            "Toggle App Windows",
+            &windows,
+        );
 
         if new_icons != self.config.hotkeys.icons
             || new_taskbar != self.config.hotkeys.taskbar
@@ -227,7 +243,6 @@ impl SettingsApp {
             self.dirty = true;
         }
 
-        // warn if any two hotkeys are the same (save is blocked until fixed)
         let h = &self.config.hotkeys;
         if h.icons == h.taskbar || h.icons == h.windows || h.taskbar == h.windows {
             ui.colored_label(
