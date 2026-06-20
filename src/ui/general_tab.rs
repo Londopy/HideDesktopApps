@@ -71,7 +71,10 @@ impl SettingsApp {
     }
 
     fn import_settings(&mut self) {
-        let Some(path) = rfd::FileDialog::new().add_filter("TOML", &["toml"]).pick_file() else {
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("TOML", &["toml"])
+            .pick_file()
+        else {
             return;
         };
         match std::fs::read_to_string(&path) {
