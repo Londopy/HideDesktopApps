@@ -360,7 +360,10 @@ mod tests {
         assert_eq!(back.hotkeys.icons, cfg.hotkeys.icons);
         assert_eq!(back.updater.channel, cfg.updater.channel);
         assert_eq!(back.profiles.len(), cfg.profiles.len());
-        assert_eq!(back.window_filter.exclude_processes, cfg.window_filter.exclude_processes);
+        assert_eq!(
+            back.window_filter.exclude_processes,
+            cfg.window_filter.exclude_processes
+        );
     }
 
     #[test]

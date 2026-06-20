@@ -150,7 +150,10 @@ fn hash_from_sums(sums: &str, filename: &str) -> Option<String> {
         };
         // sha256sum may prefix the name with '*'; also tolerate path components.
         let name = parts.next().unwrap_or("").trim_start_matches('*');
-        let base = name.rsplit(|c| c == '/' || c == '\\').next().unwrap_or(name);
+        let base = name
+            .rsplit(|c| c == '/' || c == '\\')
+            .next()
+            .unwrap_or(name);
         if base == filename {
             return Some(hash.to_lowercase());
         }
@@ -167,14 +170,22 @@ fn resolve_expected_hash(
 ) -> Option<String> {
     let sidecar = format!("{}.sha256", zip_name);
     if let Some(a) = assets.iter().find(|a| a.name == sidecar) {
-        if let Ok(text) = client.get(&a.browser_download_url).send().and_then(|r| r.text()) {
+        if let Ok(text) = client
+            .get(&a.browser_download_url)
+            .send()
+            .and_then(|r| r.text())
+        {
             if let Some(h) = text.split_whitespace().next() {
                 return Some(h.to_lowercase());
             }
         }
     }
     if let Some(a) = assets.iter().find(|a| a.name == "SHA256SUMS.txt") {
-        if let Ok(text) = client.get(&a.browser_download_url).send().and_then(|r| r.text()) {
+        if let Ok(text) = client
+            .get(&a.browser_download_url)
+            .send()
+            .and_then(|r| r.text())
+        {
             return hash_from_sums(&text, zip_name);
         }
     }
@@ -410,6 +421,9 @@ cccc3333  SHA256SUMS-decoy.zip
     #[test]
     fn hash_from_sums_tolerates_star_and_blank_lines() {
         let sums = "\n  DEAFBEEF  *file.zip\n\n";
-        assert_eq!(hash_from_sums(sums, "file.zip").as_deref(), Some("deafbeef"));
+        assert_eq!(
+            hash_from_sums(sums, "file.zip").as_deref(),
+            Some("deafbeef")
+        );
     }
 }
