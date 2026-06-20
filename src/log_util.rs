@@ -16,6 +16,12 @@ pub fn write(msg: &str) {
         let _ = std::fs::create_dir_all(parent);
     }
 
+    // Rotate once the log grows past ~512 KB, keeping one previous file.
+    const MAX_LOG_BYTES: u64 = 512 * 1024;
+    if std::fs::metadata(&log_path).is_ok_and(|m| m.len() > MAX_LOG_BYTES) {
+        let _ = std::fs::rename(&log_path, log_path.with_file_name("debug.log.1"));
+    }
+
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
         let now = chrono::Local::now();
         let _ = writeln!(file, "[{}] {}", now.format("%H:%M:%S%.3f"), msg);

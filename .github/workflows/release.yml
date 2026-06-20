@@ -324,3 +324,29 @@ jobs:
             git commit -m "chore: update Scoop manifest to ${{ github.ref_name }}"
             git push origin scoop-update:main
           fi
+
+  # ── Submit to WinGet (best-effort; requires a WINGET_TOKEN secret) ────────────
+  # Set repo secret WINGET_TOKEN to a GitHub PAT (public_repo) to enable. Without
+  # it the job no-ops. Skips prerelease tags. Never blocks the release.
+  winget:
+    name: Update WinGet manifest
+    runs-on: windows-latest
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') }}
+    continue-on-error: true
+
+    steps:
+      - name: Submit via wingetcreate
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          if (-not $env:WINGET_TOKEN) {
+            Write-Host "WINGET_TOKEN secret not set; skipping WinGet submission."
+            exit 0
+          }
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          $url = "https://github.com/Londopy/HideDesktopApps/releases/download/${{ github.ref_name }}/HideDesktopApps-${{ github.ref_name }}-x64-setup.exe"
+          $exe = "$env:RUNNER_TEMP\wingetcreate.exe"
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile $exe
+          & $exe update Londopy.HideDesktopApps --version $ver --urls $url --submit --token $env:WINGET_TOKEN

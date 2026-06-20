@@ -189,8 +189,47 @@ fn resolve_expected_hash(
     None
 }
 
+// Detected install method, used to decide whether self-update is safe.
+enum InstallKind {
+    Portable,
+    Scoop,
+    Installer,
+}
+
+fn install_kind() -> InstallKind {
+    let exe = crate::win_ops::current_exe_path().to_lowercase();
+    if exe.contains("\\scoop\\") {
+        return InstallKind::Scoop;
+    }
+    // Inno Setup writes this uninstall key; WinGet uses the same installer.
+    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::RegKey;
+    let key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1";
+    if RegKey::predef(HKEY_CURRENT_USER).open_subkey(key).is_ok() {
+        return InstallKind::Installer;
+    }
+    InstallKind::Portable
+}
+
+// If this is a package-manager-managed install, returns a hint telling the user
+// how to upgrade instead of self-replacing (which would clobber the manager).
+pub fn managed_install_hint() -> Option<String> {
+    let cmd = match install_kind() {
+        InstallKind::Scoop => "scoop update HideDesktopApps",
+        InstallKind::Installer => "winget upgrade Londopy.HideDesktopApps",
+        InstallKind::Portable => return None,
+    };
+    Some(format!("Managed install \u{2014} update with: {cmd}"))
+}
+
 // download the update zip and replace the running exe
 pub fn download_and_apply(channel: &str) -> Result<()> {
+    // Never self-replace a package-manager-managed install; tell the user how
+    // to upgrade through their manager instead.
+    if let Some(hint) = managed_install_hint() {
+        bail!("Self-update skipped. {hint}");
+    }
+
     let release = fetch_latest_release(channel)?;
     let suffix = arch_suffix();
     let client = build_client()?;

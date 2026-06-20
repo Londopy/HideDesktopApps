@@ -1,4 +1,5 @@
 use crate::state::HiddenWindow;
+use std::path::PathBuf;
 use anyhow::Result;
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, TRUE};
 use windows::Win32::UI::WindowsAndMessaging::*;
@@ -172,6 +173,8 @@ pub fn hide_windows(excluded_processes: &[String]) -> Result<Vec<HiddenWindow>> 
         });
     }
 
+    // Persist the list so a crash can't strand hidden windows (see recovery fns).
+    save_window_recovery(&hidden);
     Ok(hidden)
 }
 
@@ -191,6 +194,7 @@ pub fn restore_windows(hidden: &[HiddenWindow]) -> Result<()> {
             let _ = ShowWindow(hwnd, cmd);
         };
     }
+    clear_window_recovery();
     Ok(())
 }
 
@@ -200,4 +204,55 @@ pub fn current_exe_path() -> String {
     unsafe { windows::Win32::System::LibraryLoader::GetModuleFileNameW(None, &mut buf) };
     let end = buf.iter().position(|&c| c == 0).unwrap_or(260);
     String::from_utf16_lossy(&buf[..end])
+}
+
+
+// ── Crash recovery for hidden app windows ────────────────────────────────────
+// When windows are hidden we record their handles to a small file. A clean
+// restore deletes it; a crash leaves it, so the next launch (and the panic
+// hook) can re-show anything that was stranded.
+
+fn recovery_path() -> Option<PathBuf> {
+    crate::config::config_dir().ok().map(|d| d.join("hidden_windows.json"))
+}
+
+// Save (or, when empty, delete) the recovery record of hidden windows.
+pub fn save_window_recovery(hidden: &[HiddenWindow]) {
+    let Some(path) = recovery_path() else {
+        return;
+    };
+    if hidden.is_empty() {
+        let _ = std::fs::remove_file(&path);
+        return;
+    }
+    if let Ok(json) = serde_json::to_string(hidden) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
+// Delete the recovery record once windows are safely restored.
+pub fn clear_window_recovery() {
+    if let Some(path) = recovery_path() {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+// Re-show any windows left hidden by a previous crashed session, returning how
+// many were recovered. Safe to call when there is nothing to do.
+pub fn recover_hidden_windows() -> usize {
+    let Some(path) = recovery_path() else {
+        return 0;
+    };
+    let Ok(data) = std::fs::read_to_string(&path) else {
+        return 0;
+    };
+    let count = match serde_json::from_str::<Vec<HiddenWindow>>(&data) {
+        Ok(hidden) if !hidden.is_empty() => {
+            let _ = restore_windows(&hidden);
+            hidden.len()
+        }
+        _ => 0,
+    };
+    let _ = std::fs::remove_file(&path);
+    count
 }

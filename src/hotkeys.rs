@@ -194,3 +194,43 @@ pub fn reregister_hotkeys(
 pub fn poll_hotkey_event() -> Option<GlobalHotKeyEvent> {
     GlobalHotKeyEvent::receiver().try_recv().ok()
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_basic_hotkey() {
+        assert!(parse_hotkey("ctrl+alt+h").is_ok());
+        assert!(parse_hotkey("win+shift+f1").is_ok());
+    }
+
+    #[test]
+    fn rejects_missing_modifier() {
+        assert!(parse_hotkey("h").is_err());
+    }
+
+    #[test]
+    fn rejects_unknown_key() {
+        assert!(parse_hotkey("ctrl+alt+nope").is_err());
+    }
+
+    #[test]
+    fn rejects_unknown_modifier() {
+        assert!(parse_hotkey("foo+h").is_err());
+    }
+
+    #[test]
+    fn modifier_aliases_and_case_are_equivalent() {
+        let a = parse_hotkey("ctrl+alt+h").unwrap();
+        let b = parse_hotkey("CONTROL+Alt+H").unwrap();
+        assert_eq!(a.id(), b.id());
+    }
+
+    #[test]
+    fn modifier_only_is_rejected() {
+        // "ctrl+alt" -> key part "alt" is not a valid key code
+        assert!(parse_hotkey("ctrl+alt").is_err());
+    }
+}

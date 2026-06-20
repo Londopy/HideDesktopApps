@@ -10,7 +10,7 @@ pub struct AppState {
 
 // a window we hid, saved so we can restore it to the right state
 // (e.g. maximized window should come back maximized)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HiddenWindow {
     // hwnd as isize because HWND isn't Send
     pub hwnd: isize,

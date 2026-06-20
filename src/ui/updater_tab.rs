@@ -124,9 +124,15 @@ impl SettingsApp {
                 .is_some_and(|s| s.starts_with("Update available"));
 
             if update_ready && ui.button("Download & Install Update").clicked() {
-                let channel = self.config.updater.channel.clone();
-                crate::updater::background_apply(channel);
-                self.update_status = Some("Downloading update...".to_string());
+                if let Some(hint) = crate::updater::managed_install_hint() {
+                    // Don't self-update a Scoop/WinGet install — point the user
+                    // at their package manager instead.
+                    self.update_status = Some(hint);
+                } else {
+                    let channel = self.config.updater.channel.clone();
+                    crate::updater::background_apply(channel);
+                    self.update_status = Some("Downloading update...".to_string());
+                }
             }
         });
 

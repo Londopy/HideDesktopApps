@@ -46,6 +46,8 @@ fn main() {
         eprintln!("PANIC: {info}");
         let _ = icons::show_icons();
         let _ = taskbar::show_taskbar();
+        // Re-show any app windows we'd hidden, so a crash can't strand them.
+        let _ = win_ops::recover_hidden_windows();
         default_hook(info);
     }));
 
@@ -66,6 +68,12 @@ fn run() -> Result<()> {
     let config = config::load_config()?;
     let config_shared = Arc::new(Mutex::new(config.clone()));
     let state_shared = Arc::new(Mutex::new(AppState::default()));
+
+    // Re-show any app windows stranded hidden by a previous crashed session.
+    let recovered = win_ops::recover_hidden_windows();
+    if recovered > 0 {
+        dlog!("Recovered {recovered} hidden window(s) from a previous session");
+    }
 
     // Sync initial state from the actual desktop. Windows persists desktop-icon
     // visibility across reboots, so if we boot with icons already hidden the tray
