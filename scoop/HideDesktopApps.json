@@ -1,10 +1,10 @@
 {
-    "version": "1.1.6",
+    "version": "1.1.7",
     "description": "System tray app to hide/show desktop icons, taskbar, and all windows via configurable hotkeys. Rust-native, single binary.",
     "homepage": "https://github.com/Londopy/HideDesktopApps",
     "license": "MIT",
-    "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v1.1.6/HideDesktopApps-v1.1.6-portable.zip",
-    "hash": "31927a15e8991ef1a65fa8c3202dcfeb9984d97f2124b3dc2c04c40366f6eb57",
+    "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v1.1.7/HideDesktopApps-v1.1.7-portable.zip",
+    "hash": "af5ac6bb20543396bb6643907aeb747edaeb3b6efedf01a6172846b2b510a4ab",
     "extract_dir": "HideDesktopApps",
     "architecture": {
         "64bit": {
