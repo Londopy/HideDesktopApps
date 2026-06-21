@@ -43,13 +43,10 @@ impl SettingsApp {
                     self.config.profiles[i].hotkey = new_hk;
                     self.dirty = true;
                 }
-                ui.horizontal(|ui| {
-                    if ui.button("Clear hotkey").clicked() {
-                        self.config.profiles[i].hotkey.clear();
-                        self.dirty = true;
-                    }
-                    ui.label("(empty = no hotkey)");
-                });
+                if ui.button("Clear hotkey").clicked() {
+                    self.config.profiles[i].hotkey.clear();
+                    self.dirty = true;
+                }
 
                 ui.horizontal(|ui| {
                     let ric = ui.checkbox(&mut self.config.profiles[i].icons, "Hide Icons");
