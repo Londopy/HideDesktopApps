@@ -5,7 +5,7 @@
  
 A lightweight Windows system-tray utility that hides and shows desktop icons,
 the taskbar, and open application windows — perfect for ricing, revealing a Wallpaper
-Engine wallpaper or cleaning up for a presentation on demand.
+Engine wallpaper or cleaning up for a presentation on demand. 
 
 image:https://img.shields.io/github/v/release/Londopy/HideDesktopApps[GitHub release,link=https://github.com/Londopy/HideDesktopApps/releases/latest]
 image:https://img.shields.io/badge/License-MIT-yellow.svg[License: MIT,link=https://github.com/Londopy/HideDesktopApps/blob/main/LICENSE]
