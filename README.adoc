@@ -18,6 +18,10 @@ image:https://img.shields.io/badge/rust-1.78%2B-orange?logo=rust&logoColor=white
 image:https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4?logo=windows&logoColor=white[Platform,link=https://github.com/Londopy/HideDeskTopApps/releases/latest]
 image:https://img.shields.io/github/downloads/Londopy/HideDeskTopApps/total?[GitHub Downloads]
 
+image::assets/demo.gif[HideDesktopApps demo — hiding desktop icons and the taskbar with a hotkey,align="center"]
+
+_Ctrl+Alt+H hides the desktop icons, Ctrl+Alt+T hides the taskbar. Press again to bring everything back._
+
 ---
 
 == What is this?
@@ -236,7 +240,8 @@ HideDesktopApps/
 │   ├── ui/                 egui settings window
 │   └── ...
 ├── assets/
-│   └── installer.iss       Inno Setup script
+│   ├── installer.iss       Inno Setup script
+│   └── demo.gif            README demo animation
 ├── scoop/
 │   └── HideDesktopApps.json  Scoop manifest
 ├── winget/
