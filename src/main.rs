@@ -74,6 +74,12 @@ fn run() -> Result<()> {
     startup::setup_aumid();
 
     dlog!("--- HideDesktopApps starting ---");
+
+    // Start the Discord presence worker. It holds one long-lived IPC connection
+    // (Discord drops the presence the instant the pipe closes) and reconnects on
+    // its own, so it's fine to start before we know if Discord is even running.
+    discord::init();
+
     let config = config::load_config()?;
     let config_shared = Arc::new(Mutex::new(config.clone()));
     let state_shared = Arc::new(Mutex::new(AppState::default()));
@@ -428,6 +434,10 @@ fn main_loop(
                     if let Ok(new_tray) = tray::build_tray(&state, &new_cfg.profiles) {
                         tray_handle = new_tray;
                     }
+
+                    // so toggling the Discord checkbox takes effect immediately
+                    // instead of waiting for the next hide/show
+                    update_discord(&state, &new_cfg);
                 }
 
                 Cmd::OpenSettings => {
@@ -478,7 +488,7 @@ fn main_loop(
     }
 }
 
-// update discord rich presence if it's enabled
+// update discord rich presence, or clear it if the feature is switched off
 fn update_discord(state: &AppState, config: &AppConfig) {
     if config.discord.enabled {
         discord::set_rich_presence(
@@ -487,5 +497,7 @@ fn update_discord(state: &AppState, config: &AppConfig) {
             state.windows_hidden,
             state.active_profile.clone(),
         );
+    } else {
+        discord::clear_rich_presence();
     }
 }
