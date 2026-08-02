@@ -167,7 +167,11 @@ struct Conn {
 fn open_pipe() -> Option<File> {
     for i in 0..10 {
         let path = format!(r"\\.\pipe\discord-ipc-{i}");
-        if let Ok(f) = std::fs::OpenOptions::new().read(true).write(true).open(&path) {
+        if let Ok(f) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&path)
+        {
             return Some(f);
         }
     }
@@ -248,8 +252,16 @@ fn read_frame(pipe: &mut File, timeout: Duration) -> std::io::Result<Option<(u32
     }
     let mut payload = vec![0u8; len];
     // header already landed, so the body is on its way — give it a fixed grace period
-    fill(pipe, &mut payload, Instant::now() + Duration::from_secs(2), false)?;
-    Ok(Some((opcode, String::from_utf8_lossy(&payload).into_owned())))
+    fill(
+        pipe,
+        &mut payload,
+        Instant::now() + Duration::from_secs(2),
+        false,
+    )?;
+    Ok(Some((
+        opcode,
+        String::from_utf8_lossy(&payload).into_owned(),
+    )))
 }
 
 impl Conn {
@@ -395,7 +407,10 @@ mod tests {
     #[test]
     fn hidden_list_reads_like_english() {
         assert_eq!(hidden_list(true, false, false), "desktop icons");
-        assert_eq!(hidden_list(true, true, false), "desktop icons & the taskbar");
+        assert_eq!(
+            hidden_list(true, true, false),
+            "desktop icons & the taskbar"
+        );
         assert_eq!(
             hidden_list(true, true, true),
             "desktop icons, the taskbar & app windows"
