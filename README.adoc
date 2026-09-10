@@ -50,21 +50,6 @@ Download `HideDesktopApps-vX.X.X-x64-setup.exe` from the
 https://github.com/Londopy/HideDesktopApps/releases/latest[Releases page]
 and run it. The installer handles startup registration and notifications.
 
-=== Scoop
-
-[source,bash]
-----
-scoop bucket add HideDesktopApps https://github.com/Londopy/HideDesktopApps
-scoop install HideDesktopApps
-----
-
-=== WinGet
-
-[source,bash]
-----
-winget install Londopy.HideDesktopApps
-----
-
 === Portable ZIP
 
 Download the ZIP for your architecture (x64 / x86 / ARM64), extract it
