@@ -48,7 +48,7 @@
         "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-portable.zip",
         "hash": {
             "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/SHA256SUMS.txt",
-            "regex": "$sha256s+$basename"
+            "regex": "$sha256\\s+$basename"
         }
     }
 }
