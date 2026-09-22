@@ -10,19 +10,28 @@
         "64bit": {
             "bin": "x64\\HideDesktopApps.exe",
             "shortcuts": [
-                ["x64\\HideDesktopApps.exe", "HideDesktopApps"]
+                [
+                    "x64\\HideDesktopApps.exe",
+                    "HideDesktopApps"
+                ]
             ]
         },
         "32bit": {
             "bin": "x86\\HideDesktopApps.exe",
             "shortcuts": [
-                ["x86\\HideDesktopApps.exe", "HideDesktopApps"]
+                [
+                    "x86\\HideDesktopApps.exe",
+                    "HideDesktopApps"
+                ]
             ]
         },
         "arm64": {
             "bin": "arm64\\HideDesktopApps.exe",
             "shortcuts": [
-                ["arm64\\HideDesktopApps.exe", "HideDesktopApps"]
+                [
+                    "arm64\\HideDesktopApps.exe",
+                    "HideDesktopApps"
+                ]
             ]
         }
     },
@@ -38,7 +47,8 @@
     "autoupdate": {
         "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-portable.zip",
         "hash": {
-            "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/HideDesktopApps-v$version-portable.zip.sha256"
+            "url": "https://github.com/Londopy/HideDesktopApps/releases/download/v$version/SHA256SUMS.txt",
+            "regex": "$sha256s+$basename"
         }
     }
 }
