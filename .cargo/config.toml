@@ -1,0 +1,5 @@
+# Link the C runtime into the exe instead of loading VCRUNTIME140.dll, so the
+# app starts on a Windows without the Visual C++ Redistributable (a clean
+# machine, and winget's validation, have none).
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]
