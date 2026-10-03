@@ -103,6 +103,9 @@ fn run() -> Result<()> {
     {
         let mut state = state_shared.lock().unwrap();
         state.icons_hidden = !icons::are_icons_visible();
+        // Same for a taskbar a previous run left hidden (killed, or restarted by
+        // the updater), so the hotkey and the edge reveal work right away.
+        state.taskbar_hidden = !taskbar::is_taskbar_visible();
     }
 
     let (cmd_tx, cmd_rx) = mpsc::channel::<Cmd>();

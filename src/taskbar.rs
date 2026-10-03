@@ -55,7 +55,6 @@ pub fn all_taskbars() -> Vec<HWND> {
 }
 
 // check if the taskbar is visible
-#[allow(dead_code)]
 pub fn is_taskbar_visible() -> bool {
     let hwnd = get_taskbar();
     if hwnd.0.is_null() {
