@@ -84,13 +84,18 @@ file named `portable` is present in the same directory.
 * **Auto-start** — registers a Task Scheduler job with a configurable delay
   (default 30 s) so the app starts with Windows without a UAC prompt.
 * **Windows toast notifications** — optional pop-ups for updates, hotkey
-  conflicts, and profile switches.
+  conflicts, profile switches, and a reminder of how to bring back a hidden
+  taskbar.
 * **Discord Rich Presence** — shows what you're hiding; clears automatically
   when everything is visible.
 * **Auto-updater** — checks GitHub Releases on a configurable interval,
   verifies SHA-256, and does an in-place binary replacement.
 * **Multi-monitor taskbar** — hides and restores the taskbar on all connected
   monitors.
+* **Edge reveal** — while the taskbar is hidden, push the mouse against the
+  screen edge where it was and it comes back until you move away, so Start and
+  the tray stay within reach. On by default; the installer asks, and
+  Settings → General can switch it off.
 * **Portable mode** — place a file named `portable` next to the exe to keep
   config local.
 * **Config migration** — automatically imports a legacy `config.ini` from the
@@ -166,9 +171,11 @@ Right-click the tray icon → *Settings…* to open a tabbed window:
   individual hotkeys.
 * **Startup** — toggle auto-start and set the login delay (0–120 s).
 * **Notifications** — master toggle and per-event checkboxes (update, hotkey
-  fail, profile switch).
+  fail, profile switch, taskbar hidden).
 * **Updater** — channel (stable/beta), check interval, manual check button.
 * **Discord** — enable/disable Rich Presence.
+* **General** — theme, auto-hide on fullscreen, edge reveal for a hidden
+  taskbar, settings backup.
 * **About** — version, build target, links, "Copy debug info" button.
 
 ---
@@ -177,7 +184,10 @@ Right-click the tray icon → *Settings…* to open a tabbed window:
 
 === Taskbar hidden and can't reach the tray
 
-Open *Run* (Win+R) and type:
+Push the mouse against the screen edge where the taskbar was: it comes back
+while the mouse stays there (unless edge reveal is switched off).
+
+If the app isn't running anymore, open *Run* (Win+R) and type:
 
 [source,powershell]
 ----

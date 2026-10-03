@@ -23,10 +23,17 @@ pub struct BehaviorConfig {
     pub auto_hide_fullscreen: bool,
     #[serde(default = "default_theme")]
     pub theme: String,
+    // bring a hidden taskbar back while the mouse is pushed against its screen edge
+    #[serde(default = "default_true")]
+    pub taskbar_edge_reveal: bool,
 }
 
 fn default_theme() -> String {
     "Dark".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for BehaviorConfig {
@@ -34,6 +41,7 @@ impl Default for BehaviorConfig {
         Self {
             auto_hide_fullscreen: false,
             theme: default_theme(),
+            taskbar_edge_reveal: true,
         }
     }
 }
@@ -70,6 +78,9 @@ pub struct NotificationsConfig {
     pub on_update: bool,
     pub on_hotkey_fail: bool,
     pub on_profile_switch: bool,
+    // remind how to get the taskbar back when it gets hidden
+    #[serde(default = "default_true")]
+    pub on_taskbar_hidden: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,6 +139,7 @@ impl Default for NotificationsConfig {
             on_update: true,
             on_hotkey_fail: true,
             on_profile_switch: false,
+            on_taskbar_hidden: true,
         }
     }
 }
@@ -372,6 +384,35 @@ pub fn save_config(config: &AppConfig) -> Result<()> {
     Ok(())
 }
 
+// The installer asks whether a hidden taskbar should come back at the screen
+// edge and leaves the answer in the registry. It's applied once and then
+// deleted, so the Settings window stays in charge afterwards.
+const INSTALLER_KEY: &str = r"Software\HideDesktopApps";
+const EDGE_REVEAL_CHOICE: &str = "TaskbarEdgeReveal";
+
+// returns true if the config changed and needs saving
+pub fn apply_installer_choices(config: &mut AppConfig) -> bool {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE};
+    let hkcu = winreg::RegKey::predef(HKEY_CURRENT_USER);
+    let Ok(key) = hkcu.open_subkey_with_flags(INSTALLER_KEY, KEY_READ | KEY_SET_VALUE) else {
+        return false;
+    };
+    let Ok(choice) = key.get_value::<u32, _>(EDGE_REVEAL_CHOICE) else {
+        return false;
+    };
+    let _ = key.delete_value(EDGE_REVEAL_CHOICE);
+    apply_edge_reveal_choice(config, choice)
+}
+
+fn apply_edge_reveal_choice(config: &mut AppConfig, choice: u32) -> bool {
+    let wanted = choice != 0;
+    if config.behavior.taskbar_edge_reveal == wanted {
+        return false;
+    }
+    config.behavior.taskbar_edge_reveal = wanted;
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -426,6 +467,32 @@ exclude_processes = []
 ";
         let back: AppConfig = toml::from_str(text).expect("deserialize without profiles");
         assert!(back.profiles.is_empty());
+        // configs from before the edge reveal get it switched on, like new installs
+        assert!(back.behavior.taskbar_edge_reveal);
+        assert!(back.notifications.on_taskbar_hidden);
+    }
+
+    #[test]
+    fn edge_reveal_off_survives_a_roundtrip() {
+        let mut cfg = AppConfig::default();
+        cfg.behavior.taskbar_edge_reveal = false;
+        cfg.notifications.on_taskbar_hidden = false;
+        let text = toml::to_string_pretty(&cfg).expect("serialize");
+        // the installer looks for this exact line to pre-select the current choice
+        assert!(text.contains("taskbar_edge_reveal = false"));
+        let back: AppConfig = toml::from_str(&text).expect("deserialize");
+        assert!(!back.behavior.taskbar_edge_reveal);
+        assert!(!back.notifications.on_taskbar_hidden);
+    }
+
+    #[test]
+    fn installer_choice_switches_edge_reveal() {
+        let mut cfg = AppConfig::default();
+        assert!(!apply_edge_reveal_choice(&mut cfg, 1)); // already on
+        assert!(apply_edge_reveal_choice(&mut cfg, 0));
+        assert!(!cfg.behavior.taskbar_edge_reveal);
+        assert!(apply_edge_reveal_choice(&mut cfg, 1));
+        assert!(cfg.behavior.taskbar_edge_reveal);
     }
 
     #[test]

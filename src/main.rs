@@ -2,6 +2,7 @@
 
 mod config;
 mod discord;
+mod edge_reveal;
 mod hotkeys;
 mod icons;
 #[macro_use]
@@ -80,7 +81,13 @@ fn run() -> Result<()> {
     // its own, so it's fine to start before we know if Discord is even running.
     discord::init();
 
-    let config = config::load_config()?;
+    let mut config = config::load_config()?;
+    // pick up what was chosen in the installer
+    if config::apply_installer_choices(&mut config) {
+        if let Err(e) = config::save_config(&config) {
+            dlog!("Saving installer choices failed: {e}");
+        }
+    }
     let config_shared = Arc::new(Mutex::new(config.clone()));
     let state_shared = Arc::new(Mutex::new(AppState::default()));
 
@@ -184,6 +191,12 @@ fn main_loop(
     let mut last_fullscreen_check = Instant::now();
     let mut auto_hidden = false;
 
+    // peeking a hidden taskbar back in at its screen edge
+    let mut edge = edge_reveal::EdgeReveal::default();
+    let mut edge_zones: Vec<edge_reveal::Zone> = Vec::new();
+    let mut edge_zones_at: Option<Instant> = None;
+    let mut edge_was_hidden = false;
+
     loop {
         // pump win32 messages so tray and hotkeys work
         #[cfg(target_os = "windows")]
@@ -227,6 +240,49 @@ fn main_loop(
                 }
             } else if auto_hidden {
                 auto_hidden = false;
+            }
+        }
+
+        // show a hidden taskbar while the mouse is pushed against its edge (opt-out)
+        {
+            let reveal = config_shared.lock().unwrap().behavior.taskbar_edge_reveal;
+            let hidden = state_shared.lock().unwrap().taskbar_hidden;
+            if hidden && !edge_was_hidden {
+                // just hidden: a mouse already resting on the edge mustn't bring it straight back
+                edge.reset();
+                edge_zones_at = None;
+            }
+            edge_was_hidden = hidden;
+
+            if reveal && hidden && !auto_hidden {
+                if edge_zones_at.is_none_or(|t| t.elapsed() >= Duration::from_secs(2)) {
+                    edge_zones = edge_reveal::taskbar_zones();
+                    edge_zones_at = Some(Instant::now());
+                }
+                if let Some((x, y)) = edge_reveal::cursor_pos() {
+                    let at_edge = edge_zones.iter().any(|z| z.at_edge(x, y));
+                    let keep = edge.is_shown()
+                        && (edge_zones.iter().any(|z| z.over_taskbar(x, y))
+                            || edge_reveal::shell_ui_active(x, y));
+                    match edge.tick(Instant::now(), at_edge, keep) {
+                        Some(edge_reveal::Action::Show) => {
+                            dlog!("edge reveal: showing the taskbar");
+                            let _ = taskbar::peek_taskbar();
+                        }
+                        Some(edge_reveal::Action::Hide) => {
+                            dlog!("edge reveal: hiding the taskbar again");
+                            let _ = taskbar::hide_taskbar();
+                        }
+                        None => {}
+                    }
+                }
+            } else if edge.is_shown() {
+                // Peeked in, then the setting was switched off: put it back out of
+                // sight. If it was shown for real (hotkey, tray), it just stays.
+                if hidden {
+                    let _ = taskbar::hide_taskbar();
+                }
+                edge.reset();
             }
         }
 
@@ -358,6 +414,7 @@ fn main_loop(
                             eprintln!("hide_taskbar error: {e}");
                         } else {
                             state.taskbar_hidden = true;
+                            notifications::notify_taskbar_hidden(&config_shared.lock().unwrap());
                         }
                     }
                     tray::update_tray(&tray_handle, &state);
@@ -403,9 +460,13 @@ fn main_loop(
                 Cmd::ApplyProfile(name) => {
                     let mut state = state_shared.lock().unwrap();
                     let cfg = config_shared.lock().unwrap().clone();
+                    let taskbar_was_hidden = state.taskbar_hidden;
                     match profiles::apply_profile(&name, &cfg, &mut state) {
                         Ok(()) => {
                             notifications::notify_profile_switch(&name, &cfg.notifications);
+                            if state.taskbar_hidden && !taskbar_was_hidden {
+                                notifications::notify_taskbar_hidden(&cfg);
+                            }
                         }
                         Err(e) => {
                             dlog!("apply_profile error: {e}");

@@ -72,6 +72,33 @@ pub fn notify_hotkey_failed(hotkey: &str, config: &crate::config::NotificationsC
     }
 }
 
+// what to tell the user once the taskbar is hidden; `edge` is where the mouse
+// brings it back, when that's switched on
+pub fn taskbar_hidden_message(hotkey: &str, edge: Option<&str>) -> String {
+    match edge {
+        Some(edge) => format!(
+            "Press {hotkey} to show it again, or push the mouse against the {edge} edge of the screen."
+        ),
+        None => format!("Press {hotkey} to show it again."),
+    }
+}
+
+// toast when the taskbar gets hidden, so nobody is left without a way back
+pub fn notify_taskbar_hidden(config: &crate::config::AppConfig) {
+    if !config.notifications.enabled || !config.notifications.on_taskbar_hidden {
+        return;
+    }
+    let hotkey = crate::hotkeys::display_hotkey(&config.hotkeys.taskbar, "ctrl+alt+t");
+    let edge = config.behavior.taskbar_edge_reveal.then(|| {
+        crate::edge_reveal::primary_edge()
+            .unwrap_or(crate::edge_reveal::Edge::Bottom)
+            .name()
+    });
+    if let Err(e) = show_toast("Taskbar hidden", &taskbar_hidden_message(&hotkey, edge)) {
+        eprintln!("Toast notification failed: {e}");
+    }
+}
+
 // toast when a profile is switched
 pub fn notify_profile_switch(profile: &str, config: &crate::config::NotificationsConfig) {
     if !config.enabled || !config.on_profile_switch {
@@ -82,5 +109,22 @@ pub fn notify_profile_switch(profile: &str, config: &crate::config::Notification
         &format!("Profile '{}' activated.", profile),
     ) {
         eprintln!("Toast notification failed: {e}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn taskbar_hidden_message_names_the_hotkey_and_edge() {
+        assert_eq!(
+            taskbar_hidden_message("Ctrl+Alt+T", None),
+            "Press Ctrl+Alt+T to show it again."
+        );
+        assert_eq!(
+            taskbar_hidden_message("Ctrl+Alt+T", Some("bottom")),
+            "Press Ctrl+Alt+T to show it again, or push the mouse against the bottom edge of the screen."
+        );
     }
 }

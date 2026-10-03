@@ -31,6 +31,25 @@ pub fn parse_hotkey(s: &str) -> Result<HotKey> {
     Ok(HotKey::new(Some(modifiers), code))
 }
 
+// "ctrl+alt+t" -> "Ctrl+Alt+T", for telling the user which keys to press.
+// An invalid hotkey shows the fallback, since that's what gets registered.
+pub fn display_hotkey(s: &str, fallback: &str) -> String {
+    let s = if parse_hotkey(s).is_ok() { s } else { fallback };
+    s.split('+')
+        .map(|part| {
+            let part = part.trim().to_lowercase();
+            match part.as_str() {
+                "ctrl" | "control" => "Ctrl".to_string(),
+                "alt" => "Alt".to_string(),
+                "shift" => "Shift".to_string(),
+                "win" | "super" | "meta" => "Win".to_string(),
+                key => key.trim_start_matches("digit").to_uppercase(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("+")
+}
+
 // maps a key name like "h" to a Code
 fn parse_key_code(key: &str) -> Result<Code> {
     let code = match key {
@@ -231,5 +250,17 @@ mod tests {
     fn modifier_only_is_rejected() {
         // "ctrl+alt" -> key part "alt" is not a valid key code
         assert!(parse_hotkey("ctrl+alt").is_err());
+    }
+
+    #[test]
+    fn display_hotkey_capitalises_for_people() {
+        assert_eq!(display_hotkey("ctrl+alt+t", "ctrl+alt+t"), "Ctrl+Alt+T");
+        assert_eq!(
+            display_hotkey("Control + Shift + F5", "ctrl+alt+t"),
+            "Ctrl+Shift+F5"
+        );
+        assert_eq!(display_hotkey("super+digit1", "ctrl+alt+t"), "Win+1");
+        // unparseable: show the fallback that actually gets registered
+        assert_eq!(display_hotkey("ctrl+alt", "ctrl+alt+t"), "Ctrl+Alt+T");
     }
 }

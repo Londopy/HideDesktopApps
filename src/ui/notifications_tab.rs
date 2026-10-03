@@ -47,6 +47,15 @@ impl SettingsApp {
                 {
                     self.dirty = true;
                 }
+                if ui
+                    .checkbox(
+                        &mut self.config.notifications.on_taskbar_hidden,
+                        "Taskbar hidden (says how to bring it back)",
+                    )
+                    .changed()
+                {
+                    self.dirty = true;
+                }
             });
         });
 

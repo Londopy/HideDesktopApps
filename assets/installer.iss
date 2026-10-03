@@ -94,6 +94,10 @@ Name: "{userdesktop}\HideDesktopApps"; \
   Filename: "{app}\HideDesktopApps.exe"; \
   Tasks: desktopicon
 
+[Registry]
+; Holds choices the installer hands to the app (see [Code]); removed on uninstall.
+Root: HKCU; Subkey: "Software\HideDesktopApps"; Flags: uninsdeletekey
+
 [Run]
 ; Register AUMID in the registry so Windows toast notifications work.
 ; The AUMID must match what the app uses when sending toasts.
@@ -129,6 +133,9 @@ Filename: "powershell.exe"; \
 Type: filesandordirs; Name: "{userappdata}\HideDesktopApps"
 
 [Code]
+var
+  EdgeRevealPage: TInputOptionWizardPage;
+
 // Kill the running instance before install/uninstall so the exe isn't locked.
 procedure TerminateApp();
 var
@@ -139,10 +146,55 @@ begin
   Sleep(500);
 end;
 
+// True if an existing config has the edge reveal switched off. Reinstalls and
+// upgrades (including silent ones, which skip the page) then keep that choice.
+function EdgeRevealWasOff(): Boolean;
+var
+  Lines: TArrayOfString;
+  I: Integer;
+  Line: String;
+begin
+  Result := False;
+  if LoadStringsFromFile(ExpandConstant('{userappdata}\HideDesktopApps\config.toml'), Lines) then
+    for I := 0 to GetArrayLength(Lines) - 1 do
+    begin
+      Line := Lines[I];
+      StringChangeEx(Line, ' ', '', True);
+      if Line = 'taskbar_edge_reveal=false' then
+        Result := True;
+    end;
+end;
+
+// Ask how a hidden taskbar should come back, on a page of its own so it isn't missed.
+procedure InitializeWizard();
+begin
+  EdgeRevealPage := CreateInputOptionPage(wpSelectTasks,
+    'Hidden taskbar', 'How should a hidden taskbar come back?',
+    'The taskbar hotkey (Ctrl+Alt+T by default) hides and shows the taskbar. ' +
+    'While it is hidden, it can also come back when you push the mouse against ' +
+    'the screen edge where it was, and hide again when you move away. ' +
+    'You can change this later in Settings > General.',
+    True, False);
+  EdgeRevealPage.Add('Show it when the mouse touches the screen edge (recommended)');
+  EdgeRevealPage.Add('Keep it hidden until I press the hotkey');
+  if EdgeRevealWasOff() then
+    EdgeRevealPage.SelectedValueIndex := 1
+  else
+    EdgeRevealPage.SelectedValueIndex := 0;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssInstall then
-    TerminateApp();
+    TerminateApp()
+  else if CurStep = ssPostInstall then
+  begin
+    // The app applies this on its next start, then deletes it.
+    if EdgeRevealPage.SelectedValueIndex = 0 then
+      RegWriteDWordValue(HKEY_CURRENT_USER, 'Software\HideDesktopApps', 'TaskbarEdgeReveal', 1)
+    else
+      RegWriteDWordValue(HKEY_CURRENT_USER, 'Software\HideDesktopApps', 'TaskbarEdgeReveal', 0);
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

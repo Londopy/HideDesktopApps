@@ -2,7 +2,7 @@ use anyhow::Result;
 use windows::core::w;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW,
+    FindWindowW, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW, SW_SHOWNA,
 };
 
 // find the main taskbar window
@@ -41,6 +41,17 @@ fn get_secondary_taskbars() -> Vec<HWND> {
     }
 
     hwnds
+}
+
+// every taskbar window, primary first
+pub fn all_taskbars() -> Vec<HWND> {
+    let mut all = Vec::new();
+    let primary = get_taskbar();
+    if !primary.0.is_null() {
+        all.push(primary);
+    }
+    all.extend(get_secondary_taskbars());
+    all
 }
 
 // check if the taskbar is visible
@@ -92,6 +103,24 @@ pub fn show_taskbar() -> Result<()> {
         crate::dlog!("show_taskbar: ShowWindow(primary, SW_SHOW) = {r:?}");
         for secondary in get_secondary_taskbars() {
             let _ = ShowWindow(secondary, SW_SHOW);
+        }
+    }
+    Ok(())
+}
+
+// show the taskbar on all monitors without taking focus from the active window,
+// for peeking it in at the screen edge
+pub fn peek_taskbar() -> Result<()> {
+    let primary = get_taskbar();
+    anyhow::ensure!(
+        !primary.0.is_null(),
+        "Could not find taskbar window (Shell_TrayWnd)"
+    );
+
+    unsafe {
+        let _ = ShowWindow(primary, SW_SHOWNA);
+        for secondary in get_secondary_taskbars() {
+            let _ = ShowWindow(secondary, SW_SHOWNA);
         }
     }
     Ok(())

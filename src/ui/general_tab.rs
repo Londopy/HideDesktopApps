@@ -34,6 +34,18 @@ impl SettingsApp {
             self.dirty = true;
         }
 
+        // Bring a hidden taskbar back at the screen edge.
+        if ui
+            .checkbox(
+                &mut self.config.behavior.taskbar_edge_reveal,
+                "Show a hidden taskbar while the mouse is pushed against its screen edge",
+            )
+            .on_hover_text("It hides again when the mouse moves away, like an auto-hiding taskbar.")
+            .changed()
+        {
+            self.dirty = true;
+        }
+
         ui.add_space(8.0);
         ui.separator();
 
